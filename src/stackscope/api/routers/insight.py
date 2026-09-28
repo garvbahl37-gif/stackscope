@@ -80,5 +80,7 @@ def quality() -> dict:
         "weights": cached("SELECT * FROM dq.weight_diagnostics ORDER BY survey_year"),
         "targets": cached("SELECT * FROM dq.weight_targets"),
         "schema_notes": cached("SELECT * FROM dq.schema_notes ORDER BY survey_year"),
+        "reconciliation": cached("""SELECT * FROM dq.published_reconciliation
+                                    ORDER BY metric, "group" NULLS FIRST, item, survey_year"""),
         "layers": layers, "coverage": coverage, "aliases": top_aliases, "tables": tables,
     }

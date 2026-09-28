@@ -14,6 +14,7 @@ import pandas as pd
 
 from .. import settings
 from ..harmonize.schema import SCHEMAS
+from . import reconcile
 
 
 @dataclass
@@ -32,7 +33,7 @@ def _status(ok: bool, warn: bool = False) -> str:
     return "pass" if ok else ("warn" if warn else "fail")
 
 
-def run_checks(con) -> list[Check]:
+def run_checks(con, reconciliation: pd.DataFrame | None = None) -> list[Check]:
     checks: list[Check] = []
     q = lambda sql: con.execute(sql).fetchone()  # noqa: E731
 
@@ -41,9 +42,21 @@ def run_checks(con) -> list[Check]:
     for year, cfg in settings.sources()["survey"].items():
         expected = cfg["expected_rows"]
         actual = counts.get(int(year), 0)
-        checks.append(Check(f"reconcile_{year}", "Accuracy", f"{year} respondent count matches publisher total",
+        checks.append(Check(f"reconcile_{year}", "Accuracy", f"{year} respondent count matches the publisher's released file",
                             actual, f"= {expected:,}", _status(actual == expected), True,
-                            f"loaded {actual:,} of {expected:,} published responses"))
+                            f"loaded {actual:,} of {expected:,} released responses"))
+
+    # --- Accuracy: reproduce Stack Overflow's own published results (unweighted, publisher's definitions) ----
+    rec = reconciliation if reconciliation is not None else reconcile.compute(con)
+    shares = rec[rec.unit == "pct"]
+    same = shares[shares.same_base]
+    with_count = rec[rec.status == "count matches"]
+    problems = int((rec.status == "differs").sum())
+    checks.append(Check("published_reconciliation", "Accuracy", "Figures reproduce Stack Overflow's published results",
+                        float((same.status == "match").mean()) if len(same) else 1.0,
+                        f"like-for-like within {reconcile.TOLERANCE_PP} pp", _status(problems == 0), False,
+                        f"{len(same)} like-for-like figures within {same['diff'].abs().max():.2f} pp; {len(with_count)} shares on a "
+                        f"larger published base confirmed by user counts; {problems} unexplained"))
 
     manifest_path = settings.RAW_DIR / "manifest.json"
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
@@ -182,8 +195,9 @@ def schema_notes() -> pd.DataFrame:
 
 
 def run(con) -> dict:
-    checks = run_checks(con)
-    frames = {"check_results": pd.DataFrame([asdict(c) for c in checks]),
+    reconciliation = reconcile.compute(con)
+    checks = run_checks(con, reconciliation)
+    frames = {"check_results": pd.DataFrame([asdict(c) for c in checks]), "published_reconciliation": reconciliation,
               "completeness": completeness_matrix(con), "schema_notes": schema_notes()}
     for name, frame in frames.items():
         con.register("_f", frame)
