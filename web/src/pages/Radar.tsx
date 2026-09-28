@@ -101,84 +101,87 @@ export default function RadarPage() {
       />
       {isError ? <ErrorState error={error} /> : !data ? <Loading height={640} /> : (
         <div className="grid">
-          <Panel className="span-8" hero title="The 2025 radar" caption="Rings run from Adopt at the centre to Hold at the edge. Hover a blip or a list entry to compare."
-                 tools={<DownloadButton columns={COLUMNS} rows={data.blips} filename="tech_radar.csv" />}>
-            <div className="radar-wrap">
-              <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="radar" role="img" aria-label="Technology radar with four sectors and four rings">
-                {[...RINGS].reverse().map((ring) => (
-                  <circle key={ring} cx={C} cy={C} r={R * RING_BANDS[ring][1]} fill={ring === "Adopt" ? "var(--brand-soft)" : "none"}
-                          fillOpacity={ring === "Adopt" ? 0.55 : 0} stroke="var(--line-strong)" strokeWidth={1} />
-                ))}
-                <line x1={C - R} y1={C} x2={C + R} y2={C} stroke="var(--line-strong)" strokeWidth={1} />
-                <line x1={C} y1={C - R} x2={C} y2={C + R} stroke="var(--line-strong)" strokeWidth={1} />
-                {RINGS.map((ring) => {
-                  const [f0, f1] = RING_BANDS[ring];
-                  return (
-                    <text key={ring} x={C} y={C - R * ((f0 + f1) / 2) + 4} textAnchor="middle" className="radar__ring">{ring}</text>
-                  );
-                })}
-                {Object.entries(SECTORS).map(([sector, [a0, a1]]) => {
-                  const [x, y] = polar(R * 1.0, (a0 + a1) / 2);
-                  const anchor = x < C ? "start" : "end";
-                  return (
-                    <text key={sector} x={x < C ? 14 : SIZE - 14} y={y < C ? 30 : SIZE - 18} textAnchor={anchor} className="radar__sector">
-                      <tspan fill={colors[sector]}>●</tspan> {sector}
-                    </text>
-                  );
-                })}
-                {placed.map((b) => {
-                  const isActive = b.tech === hover;
-                  return (
-                    <g key={b.tech} transform={`translate(${b.x} ${b.y})`} className="radar__blip" tabIndex={0}
-                       onMouseEnter={() => setHover(b.tech)} onMouseLeave={() => setHover(null)}
-                       onFocus={() => setHover(b.tech)} onBlur={() => setHover(null)}
-                       aria-label={`${b.blip}. ${b.tech}, ${b.ring}`}>
-                      <circle r={BLIP_R + 12} fill="transparent" />
-                      <circle r={isActive ? BLIP_R + 3 : BLIP_R} fill={b.color} stroke="var(--surface)" strokeWidth={2}
-                              opacity={hover && !isActive ? 0.35 : 1} />
-                      <text textAnchor="middle" dy="0.35em" fill={inkOn(b.color)} className="radar__num">{b.blip}</text>
-                    </g>
-                  );
-                })}
-              </svg>
-              {active && (
-                <div className="radar__card" style={{ left: `${(active.x / SIZE) * 100}%`, top: `${(active.y / SIZE) * 100}%` }}>
-                  <strong>{active.tech}</strong>
-                  <span className="muted small">{active.ring} ring, {active.sector}</span>
-                  <dl className="kv small" style={{ marginTop: 6 }}>
-                    <dt>Adoption {active.survey_year}</dt><dd>{pct(active.share_used_w)}</dd>
-                    <dt>Momentum</dt><dd>{fixed(active.momentum)} σ</dd>
-                    <dt>Retention</dt><dd>{pct(active.retention_w, 0)}</dd>
-                    <dt>Attraction</dt><dd>{pct(active.attraction_w, 0)}</dd>
-                    <dt>Trend</dt><dd>{active.trend}{active.odds_growth != null ? ` (${signedPct(active.odds_growth, 0)}/yr)` : ""}</dd>
-                  </dl>
-                </div>
-              )}
+          {/* own grid, so the sticky radar stops where the lists end */}
+          <div className="grid span-12 radar-layout">
+            <Panel className="span-8 radar-panel" hero title="The 2025 radar" caption="Rings run from Adopt at the centre to Hold at the edge. Hover a blip or a list entry to compare."
+                   tools={<DownloadButton columns={COLUMNS} rows={data.blips} filename="tech_radar.csv" />}>
+              <div className="radar-wrap">
+                <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="radar" role="img" aria-label="Technology radar with four sectors and four rings">
+                  {[...RINGS].reverse().map((ring) => (
+                    <circle key={ring} cx={C} cy={C} r={R * RING_BANDS[ring][1]} fill={ring === "Adopt" ? "var(--brand-soft)" : "none"}
+                            fillOpacity={ring === "Adopt" ? 0.55 : 0} stroke="var(--line-strong)" strokeWidth={1} />
+                  ))}
+                  <line x1={C - R} y1={C} x2={C + R} y2={C} stroke="var(--line-strong)" strokeWidth={1} />
+                  <line x1={C} y1={C - R} x2={C} y2={C + R} stroke="var(--line-strong)" strokeWidth={1} />
+                  {RINGS.map((ring) => {
+                    const [f0, f1] = RING_BANDS[ring];
+                    return (
+                      <text key={ring} x={C} y={C - R * ((f0 + f1) / 2) + 4} textAnchor="middle" className="radar__ring">{ring}</text>
+                    );
+                  })}
+                  {Object.entries(SECTORS).map(([sector, [a0, a1]]) => {
+                    const [x, y] = polar(R * 1.0, (a0 + a1) / 2);
+                    const anchor = x < C ? "start" : "end";
+                    return (
+                      <text key={sector} x={x < C ? 14 : SIZE - 14} y={y < C ? 30 : SIZE - 18} textAnchor={anchor} className="radar__sector">
+                        <tspan fill={colors[sector]}>●</tspan> {sector}
+                      </text>
+                    );
+                  })}
+                  {placed.map((b) => {
+                    const isActive = b.tech === hover;
+                    return (
+                      <g key={b.tech} transform={`translate(${b.x} ${b.y})`} className="radar__blip" tabIndex={0}
+                         onMouseEnter={() => setHover(b.tech)} onMouseLeave={() => setHover(null)}
+                         onFocus={() => setHover(b.tech)} onBlur={() => setHover(null)}
+                         aria-label={`${b.blip}. ${b.tech}, ${b.ring}`}>
+                        <circle r={BLIP_R + 12} fill="transparent" />
+                        <circle r={isActive ? BLIP_R + 3 : BLIP_R} fill={b.color} stroke="var(--surface)" strokeWidth={2}
+                                opacity={hover && !isActive ? 0.35 : 1} />
+                        <text textAnchor="middle" dy="0.35em" fill={inkOn(b.color)} className="radar__num">{b.blip}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+                {active && (
+                  <div className="radar__card" style={{ left: `${(active.x / SIZE) * 100}%`, top: `${(active.y / SIZE) * 100}%` }}>
+                    <strong>{active.tech}</strong>
+                    <span className="muted small">{active.ring} ring, {active.sector}</span>
+                    <dl className="kv small" style={{ marginTop: 6 }}>
+                      <dt>Adoption {active.survey_year}</dt><dd>{pct(active.share_used_w)}</dd>
+                      <dt>Momentum</dt><dd>{fixed(active.momentum)} σ</dd>
+                      <dt>Retention</dt><dd>{pct(active.retention_w, 0)}</dd>
+                      <dt>Attraction</dt><dd>{pct(active.attraction_w, 0)}</dd>
+                      <dt>Trend</dt><dd>{active.trend}{active.odds_growth != null ? ` (${signedPct(active.odds_growth, 0)}/yr)` : ""}</dd>
+                    </dl>
+                  </div>
+                )}
+              </div>
+            </Panel>
+            <div className="span-4 radar-lists">
+              {Object.keys(SECTORS).sort().map((sector) => (
+                <section key={sector} className="panel" style={{ padding: "14px 16px" }}>
+                  <h2 className="panel__title"><span style={{ color: colors[sector] }}>●</span> {sector}</h2>
+                  {RINGS.map((ring) => {
+                    const items = placed.filter((b) => b.sector === sector && b.ring === ring).sort((a, b) => a.blip - b.blip);
+                    if (!items.length) return null;
+                    return (
+                      <div key={ring} className="radar-list__ring">
+                        <span className="tag">{ring}</span>
+                        <ul>
+                          {items.map((b) => (
+                            <li key={b.tech} onMouseEnter={() => setHover(b.tech)} onMouseLeave={() => setHover(null)}
+                                data-active={hover === b.tech || undefined}>
+                              <span className="num muted">{b.blip}</span> {b.tech} <TrendMark trend={b.trend} />
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </section>
+              ))}
             </div>
-          </Panel>
-          <div className="span-4 radar-lists">
-            {Object.keys(SECTORS).sort().map((sector) => (
-              <section key={sector} className="panel" style={{ padding: "14px 16px" }}>
-                <h2 className="panel__title"><span style={{ color: colors[sector] }}>●</span> {sector}</h2>
-                {RINGS.map((ring) => {
-                  const items = placed.filter((b) => b.sector === sector && b.ring === ring).sort((a, b) => a.blip - b.blip);
-                  if (!items.length) return null;
-                  return (
-                    <div key={ring} className="radar-list__ring">
-                      <span className="tag">{ring}</span>
-                      <ul>
-                        {items.map((b) => (
-                          <li key={b.tech} onMouseEnter={() => setHover(b.tech)} onMouseLeave={() => setHover(null)}
-                              data-active={hover === b.tech || undefined}>
-                            <span className="num muted">{b.blip}</span> {b.tech} <TrendMark trend={b.trend} />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </section>
-            ))}
           </div>
           <Panel className="span-12" title="How the rings are assigned">
             <div className="ring-defs">

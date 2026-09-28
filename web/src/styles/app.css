@@ -303,6 +303,19 @@ table.data tbody tr[data-selected="true"] { background: var(--brand-soft); }
   box-shadow: var(--shadow-pop); display: grid; gap: 2px;
 }
 .radar-lists { display: grid; gap: 12px; align-content: start; }
+/* The sector lists run much longer than the radar. Side by side (wide, tall screens) the radar keeps its own
+   height and stays in view while the lists scroll past, sized to fit the window; otherwise it gets its own
+   row and the lists sit two by two beneath it. */
+.radar-panel { align-self: start; }
+@media (width > 1180px) and (height >= 760px) {
+  .radar-panel { position: sticky; top: 16px; }
+  .radar-panel .radar-wrap { max-width: min(760px, calc(100vh - 160px)); }
+}
+@media (width <= 1180px), (height < 760px) {
+  .radar-panel, .radar-lists { grid-column: span 12; }
+  .radar-lists { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (width <= 600px) { .radar-lists { grid-template-columns: 1fr; } }
 .radar-list__ring { display: grid; grid-template-columns: 64px 1fr; gap: 8px; margin-top: 10px; align-items: start; }
 .radar-list__ring ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .radar-list__ring li { font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 1px 6px; border-radius: 6px; cursor: default; }
