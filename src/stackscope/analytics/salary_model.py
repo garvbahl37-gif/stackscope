@@ -6,6 +6,8 @@
     learned on a held-out calibration split, giving a finite-sample coverage guarantee (~80%).
   * Explanations are exact TreeSHAP contributions from LightGBM (`pred_contrib`), aggregated into
     human-readable feature groups for the dashboard's "why this estimate" waterfall.
+  * Serving lives in salary_runtime.py, which scores the saved models through LightGBM's C API without
+    pandas, NumPy or SciPy.
 
 Splits (stratified by survey year): 65% train / 10% early-stopping / 10% calibration / 15% test.
 """
@@ -14,13 +16,13 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from functools import lru_cache
 
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
 from .. import settings
+from .salary_runtime import SalaryEstimator, model_paths
 
 YEARS = (2023, 2024, 2025)
 TECH_CATEGORIES = ("language", "database", "cloud", "webframe", "devops")
@@ -50,11 +52,6 @@ def conformal_margin(lower: np.ndarray, upper: np.ndarray, y: np.ndarray, alpha:
     n = len(scores)
     level = min(1.0, np.ceil((n + 1) * (1 - alpha)) / n)
     return float(np.quantile(scores, level, method="higher"))
-
-
-def _paths():
-    d = settings.MODELS_DIR
-    return {q: d / f"salary_{q}.txt" for q in QUANTILES} | {"meta": d / "salary_meta.json"}
 
 
 def load_frame(con) -> tuple[pd.DataFrame, list[str]]:
@@ -141,7 +138,7 @@ def train(con) -> dict:
     split = _split(frame)
     parts = {name: (X[split == name], y[(split == name).to_numpy()]) for name in ("train", "valid", "calib", "test")}
 
-    models, paths = {}, _paths()
+    models, paths = {}, model_paths()
     settings.MODELS_DIR.mkdir(parents=True, exist_ok=True)
     for name, q in QUANTILES.items():
         model = lgb.LGBMRegressor(objective="quantile", alpha=q, n_estimators=4000, **PARAMS)
@@ -215,58 +212,3 @@ def train(con) -> dict:
         con.unregister("_f")
     SalaryEstimator.load.cache_clear()
     return {k: round(v, 4) if isinstance(v, float) else v for k, v in metrics.items() if k != "best_iterations"}
-
-
-class SalaryEstimator:
-    """Loads the trained artifacts and serves calibrated, explained predictions (used by the API)."""
-
-    def __init__(self, meta: dict, boosters: dict[str, lgb.Booster]):
-        self.meta = meta
-        self.boosters = boosters
-
-    @classmethod
-    @lru_cache(maxsize=1)
-    def load(cls) -> SalaryEstimator:
-        paths = _paths()
-        meta = json.loads(paths["meta"].read_text())
-        boosters = {q: lgb.Booster(model_file=str(paths[q])) for q in QUANTILES}
-        return cls(meta, boosters)
-
-    def _frame(self, profile: dict) -> pd.DataFrame:
-        row = {col: profile.get(col) for col in ("region", "dev_role", "org_size", "ed_level", "remote_work",
-                                                   "industry", "age_band", "ai_use")}
-        row["iso3"] = profile.get("country")
-        row["years_code"] = profile.get("years_code")
-        row["work_exp"] = profile.get("work_exp", profile.get("years_code"))
-        row["survey_year"] = profile.get("survey_year", max(self.meta["years"]))
-        techs = set(profile.get("technologies", []))
-        for col in self.meta["tech_features"]:
-            row[col] = int(col.removeprefix("uses_") in techs)
-        row["n_languages"] = profile.get("n_languages", len(techs))
-        row["n_technologies"] = profile.get("n_technologies", len(techs))
-        frame = pd.DataFrame([row])
-        return _prepare(frame, self.meta["levels"], self.meta["tech_features"])[self.meta["feature_order"]]
-
-    def predict(self, profile: dict) -> dict:
-        X = self._frame(profile)
-        preds = {q: float(b.predict(X)[0]) for q, b in self.boosters.items()}
-        margin = self.meta["conformal_margin_log"]
-        lo, mid, hi = preds["p10"] - margin, preds["p50"], preds["p90"] + margin
-        lo, hi = min(lo, mid), max(hi, mid)
-        contrib = self.boosters["p50"].predict(X, pred_contrib=True)[0]
-        base = float(contrib[-1])
-        groups: dict[str, float] = {}
-        for feature, value in zip(self.meta["feature_order"], contrib[:-1], strict=True):
-            group = "Tech stack" if feature.startswith("uses_") else self.meta["groups"].get(feature, "Other")
-            groups[group] = groups.get(group, 0.0) + float(value)
-        techs = [(f.removeprefix("uses_"), float(v)) for f, v in zip(self.meta["feature_order"], contrib[:-1], strict=True)
-                 if f.startswith("uses_") and X.iloc[0][f] == 1]
-        return {
-            "p10": float(np.exp(lo)), "p50": float(np.exp(mid)), "p90": float(np.exp(hi)),
-            "baseline": float(np.exp(base)),
-            "contributions": sorted(({"group": g, "log_effect": v, "multiplier": float(np.exp(v))} for g, v in groups.items()),
-                                    key=lambda d: -abs(d["log_effect"])),
-            "tech_effects": sorted(({"tech": t, "multiplier": float(np.exp(v))} for t, v in techs), key=lambda d: -d["multiplier"]),
-            "price_base_year": self.meta["price_base_year"],
-            "coverage": self.meta["metrics"]["coverage_conformal"],
-        }

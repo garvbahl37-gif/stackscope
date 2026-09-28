@@ -79,11 +79,13 @@ class Profile(BaseModel):
 
 
 def _estimator():
-    from ...analytics.salary_model import SalaryEstimator
+    from ...analytics.salary_runtime import SalaryEstimator
     try:
         return SalaryEstimator.load()
     except FileNotFoundError as exc:
         raise HTTPException(503, "Salary model not trained yet — run `stackscope run --only analytics`.") from exc
+    except OSError as exc:  # LightGBM's native library (or its OpenMP runtime) failed to load
+        raise HTTPException(503, f"Salary model unavailable: {exc}") from exc
 
 
 @router.get("/estimator/options")
