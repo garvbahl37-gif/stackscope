@@ -19,9 +19,20 @@ SELECT
         WHEN GROUPING(ed_level) = 0  THEN 'education'
         ELSE 'all'
     END AS cut,
-    coalesce(iso3, region, dev_role, exp_band, org_size, remote_work, ed_level, 'All') AS segment,
-    CASE WHEN GROUPING(region) = 0 AND (GROUPING(dev_role) = 0 OR GROUPING(exp_band) = 0)
-         THEN coalesce(dev_role, exp_band) END AS sub_segment,
+    -- The segment comes only from the grouped column. A missing answer is 'Unknown', so 'All' can
+    -- only mean the grand total.
+    CASE
+        WHEN GROUPING(iso3) = 0        THEN coalesce(iso3, 'Unknown')
+        WHEN GROUPING(region) = 0      THEN coalesce(region, 'Unknown')
+        WHEN GROUPING(dev_role) = 0    THEN coalesce(dev_role, 'Unknown')
+        WHEN GROUPING(exp_band) = 0    THEN coalesce(exp_band, 'Unknown')
+        WHEN GROUPING(org_size) = 0    THEN coalesce(org_size, 'Unknown')
+        WHEN GROUPING(remote_work) = 0 THEN coalesce(remote_work, 'Unknown')
+        WHEN GROUPING(ed_level) = 0    THEN coalesce(ed_level, 'Unknown')
+        ELSE 'All'
+    END AS segment,
+    CASE WHEN GROUPING(region) = 0 AND GROUPING(dev_role) = 0 THEN coalesce(dev_role, 'Unknown')
+         WHEN GROUPING(region) = 0 AND GROUPING(exp_band) = 0 THEN coalesce(exp_band, 'Unknown') END AS sub_segment,
     count(*)                                  AS n,
     quantile_cont(comp_usd, 0.25)             AS p25_usd,
     median(comp_usd)                          AS median_usd,

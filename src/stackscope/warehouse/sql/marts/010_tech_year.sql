@@ -82,6 +82,7 @@ metrics AS (
         safe_div(nu.n_wanted, bw.n)                    AS share_wanted,
         safe_div(nu.sw_wanted, bw.sw)                  AS share_wanted_w,
         uw.n                                           AS users_asked_want,
+        uw.sw                                          AS users_asked_want_w,
         nu.n_retained,
         safe_div(nu.n_retained, uw.n)                  AS retention,
         safe_div(nu.sw_retained, uw.sw)                AS retention_w,

@@ -199,8 +199,9 @@ JOIN core.respondent_weight AS w USING (resp_key)
 WHERE r.survey_year = 2025 AND r.exp_band IS NOT NULL
 GROUP BY r.exp_band
 ORDER BY min(r.years_code);"""},
-    {"title": "Market concentration (HHI) of cloud platforms", "skill": "Market-share analytics", "sql": """SELECT survey_year, hhi, effective_competitors, round(100 * cr3, 1) AS cr3_pct,
-       leader, round(100 * leader_share, 1) AS leader_share_pct, structure
+    {"title": "Market concentration (HHI) of cloud platforms", "skill": "Market-share analytics", "sql": """-- hhi covers the options listed that year; hhi_like_for_like removes the effect of new or dropped options
+SELECT survey_year, technologies AS options_listed, hhi, hhi_like_for_like, round(100 * cr3, 1) AS cr3_pct,
+       leader, round(100 * leader_share, 1) AS leader_share_pct
 FROM mart.market_concentration
 WHERE category = 'cloud'
 ORDER BY survey_year;"""},

@@ -3,7 +3,9 @@
 --
 -- A "churner" of X uses X today, was asked what they want next year, and did not pick X.
 -- A churn flow X -> Y counts churners of X who want Y (same category) and do not use Y yet.
--- Weighted counts are used for shares; raw counts gate statistical reliability (n >= 20).
+-- Churn rates, destination shares and ranks are weighted, matching the retention figures in
+-- mart.tech_year; raw counts gate statistical reliability (n >= 20) and give net migration in
+-- respondents.
 -- =============================================================================================
 
 CREATE OR REPLACE TABLE mart.tech_switching AS
@@ -29,8 +31,11 @@ flows AS (
       AND b.wanted AND NOT b.used          -- b: arriving
     GROUP BY ALL
 ),
-churners AS (   -- churners per technology-year, from the KPI cube
-    SELECT survey_year, tech_id, users_asked_want - n_retained AS churners, retention
+churners AS (   -- churners per technology-year (raw and weighted), from the KPI cube
+    SELECT survey_year, tech_id,
+           users_asked_want - n_retained            AS churners,
+           users_asked_want_w * (1 - retention_w)   AS churners_w,
+           retention_w
     FROM mart.tech_year
     WHERE users_asked_want > n_retained
 )
@@ -41,10 +46,10 @@ SELECT
     tt.tech                                             AS to_tech,
     f.n,
     f.sw,
-    f.n / c.churners                                    AS share_of_churners,
+    f.sw / c.churners_w                                 AS share_of_churners,
     c.churners                                          AS from_churners,
-    1 - c.retention                                     AS from_churn_rate,
-    rank() OVER (PARTITION BY f.survey_year, f.from_id ORDER BY f.n DESC) AS destination_rank
+    1 - c.retention_w                                   AS from_churn_rate,
+    rank() OVER (PARTITION BY f.survey_year, f.from_id ORDER BY f.sw DESC) AS destination_rank
 FROM flows AS f
 JOIN core.dim_technology AS tf ON tf.tech_id = f.from_id
 JOIN core.dim_technology AS tt ON tt.tech_id = f.to_id
