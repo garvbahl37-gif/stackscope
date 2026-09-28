@@ -1,0 +1,40 @@
+// StackScope DAX measures (Power BI). Load the Parquet files in this folder, then create the
+// relationships listed in model.md. All measures respect slicers on year, country and technology.
+
+Respondents = COUNTROWS ( fact_respondent )
+
+Weighted respondents = SUM ( respondent_weight[weight] )
+
+Median pay (USD) =
+    CALCULATE ( MEDIAN ( fact_respondent[comp_usd] ), fact_respondent[in_pay_benchmark] = TRUE () )
+
+Median pay (PPP) =
+    CALCULATE ( MEDIAN ( fact_respondent[comp_ppp] ), fact_respondent[in_pay_benchmark] = TRUE () )
+
+Median real pay (2025 USD) =
+    CALCULATE ( MEDIAN ( fact_respondent[comp_usd_real] ), fact_respondent[in_pay_benchmark] = TRUE () )
+
+Pay vs all countries =
+    DIVIDE ( [Median pay (USD)], CALCULATE ( [Median pay (USD)], REMOVEFILTERS ( dim_country ) ) ) - 1
+
+AI adoption % (weighted) =
+    DIVIDE (
+        CALCULATE ( [Weighted respondents], fact_respondent[ai_use] = "Using" ),
+        CALCULATE ( [Weighted respondents], NOT ISBLANK ( fact_respondent[ai_use] ) )
+    )
+
+Technology users =
+    CALCULATE ( DISTINCTCOUNT ( bridge_tech_usage[resp_key] ), bridge_tech_usage[used] = TRUE () )
+
+// Adoption from the pre-computed KPI cube (correct denominators per question and year)
+Adoption % = AVERAGE ( tech_year[share_used_w] )
+
+Retention % = AVERAGE ( tech_year[retention_w] )
+
+Adoption change vs previous wave (pp) =
+    VAR thisYear = SELECTEDVALUE ( tech_year[survey_year] )
+    VAR prev = CALCULATE ( [Adoption %], tech_year[survey_year] = thisYear - 1 )
+    RETURN IF ( NOT ISBLANK ( prev ), ( [Adoption %] - prev ) * 100 )
+
+Adoption rank in category =
+    RANKX ( ALLSELECTED ( tech_year[tech] ), [Adoption %], , DESC, DENSE )

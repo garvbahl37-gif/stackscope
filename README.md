@@ -2,18 +2,59 @@
 
 **Technology market intelligence from 664,042 developer survey responses (2017–2025).**
 
+[![CI](https://github.com/garvbahl37-gif/stackscope/actions/workflows/ci.yml/badge.svg)](https://github.com/garvbahl37-gif/stackscope/actions/workflows/ci.yml)
+[![Live on Vercel](https://img.shields.io/badge/live-stackscope--analytics.vercel.app-0e5b63?logo=vercel)](https://stackscope-analytics.vercel.app)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776ab?logo=python&logoColor=white)
+![DuckDB 1.5](https://img.shields.io/badge/DuckDB-1.5-fff000?logo=duckdb&logoColor=black)
+![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)
+
+**Live dashboard:** https://stackscope-analytics.vercel.app<br>
+**API documentation:** https://stackscope-analytics.vercel.app/api/docs
+
 StackScope turns nine inconsistent annual releases of the Stack Overflow Developer Survey into one reproducible analytics
 warehouse, then reads it the way an industry analyst would. It shows which technologies lead and which are losing
 momentum, where developers are migrating, what skills are worth after controlling for everything else, and how far to
 trust each number. The warehouse is DuckDB (a star schema), the analytics are Python, the API is FastAPI and the dashboard
-is React with ECharts. Everything, from raw download to the Excel pack, rebuilds with one command.
+is React with ECharts. Everything, from the raw download to the Excel pack, rebuilds with one command.
 
 ![StackScope overview: an animated market-position quadrant for programming languages](docs/screenshots/overview.png)
 
 > Independent portfolio project. Not affiliated with Gartner or Stack Overflow. "Magic Quadrant" is a Gartner trademark;
 > the quadrant here is an original, data-driven method that only borrows the idea of a two-axis market view.
 
----
+## Contents
+
+- [Try it in five minutes](#try-it-in-five-minutes)
+- [What the data says](#what-the-data-says)
+- [What's inside](#whats-inside)
+- [Skills demonstrated](#skills-demonstrated)
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+- [API](#api)
+- [Run it locally](#run-it-locally)
+- [Pipeline stages](#pipeline-stages)
+- [Deliverables](#deliverables)
+- [Testing and quality](#testing-and-quality)
+- [Project structure](#project-structure)
+- [Tech stack](#tech-stack)
+- [Limitations](#limitations)
+- [Data and licences](#data-and-licences)
+
+## Try it in five minutes
+
+A suggested path through the [live dashboard](https://stackscope-analytics.vercel.app):
+
+1. **Overview.** Press play on the quadrant to watch nine years of market movement, then switch between languages,
+   databases, cloud platforms and web frameworks.
+2. **Retention & churn.** The churn-flow diagram shows where each technology's leavers want to go: 51% of Java users
+   don't want to keep using it, and Rust is their first choice.
+3. **Pay & skills.** Skill premiums are estimated after controlling for country, experience, role, company size,
+   education and industry. AWS is worth +6.8%, against a raw gap of +27%.
+4. **Salary estimator.** Change the country or add a technology. The estimate comes back as a calibrated P10–P90 range
+   with an explanation of what drives it.
+5. **Data quality.** Browse the 28 automated checks behind every number, including publisher defects the pipeline caught.
+6. **SQL lab.** Run one of the ten showcase queries, or write your own, against the full warehouse in a read-only
+   sandbox.
 
 ## What the data says
 
@@ -53,12 +94,29 @@ them from the warehouse, so they cannot drift from the data.
 | Data quality | Can the numbers be trusted? | 28 automated checks (DAMA dimensions), lineage, completeness matrix |
 | SQL lab | Query the warehouse directly | sandboxed read-only DuckDB, 10 showcase queries |
 
+Every chart has a data-table view and a CSV export, and the dashboard has light and dark themes.
+
 <table>
 <tr><td><img src="docs/screenshots/landscape.png" alt="Market landscape"></td><td><img src="docs/screenshots/radar.png" alt="Technology radar"></td></tr>
 <tr><td><img src="docs/screenshots/retention.png" alt="Retention and churn"></td><td><img src="docs/screenshots/estimator.png" alt="Salary estimator"></td></tr>
 <tr><td><img src="docs/screenshots/ai.png" alt="AI adoption and trust"></td><td><img src="docs/screenshots/quality.png" alt="Data quality"></td></tr>
 <tr><td><img src="docs/screenshots/pay.png" alt="Pay and skills"></td><td><img src="docs/screenshots/landscape-dark.png" alt="Market landscape in the dark theme"></td></tr>
 </table>
+
+## Skills demonstrated
+
+| Skill | Where to look |
+|---|---|
+| SQL: window functions, CTEs, GROUPING SETS, PIVOT/UNPIVOT, macros | [`src/stackscope/warehouse/sql/`](src/stackscope/warehouse/sql), the SQL lab |
+| Data modelling: star schema, bridges for multi-select answers, conformed dimensions | [`warehouse/sql/core`](src/stackscope/warehouse/sql/core), [data dictionary](docs/data_dictionary.md) |
+| ETL and automation: one-command, idempotent, seeded pipeline with provenance | [`cli.py`](src/stackscope/cli.py), [pipeline stages](#pipeline-stages) |
+| Excel: INDEX/MATCH, CHOOSE, COUNTIFS, AVERAGEIFS, MAXIFS, validation, conditional formatting | [`reports/StackScope_Analyst_Pack.xlsx`](reports/StackScope_Analyst_Pack.xlsx) |
+| Power BI: star-schema export with DAX measures | [`reports/bi/measures.dax`](reports/bi/measures.dax), [`reports/bi/model.md`](reports/bi/model.md) |
+| Statistics: survey weighting, confidence intervals, multiple-testing control, regression | [methodology](docs/methodology.md), [`analytics/`](src/stackscope/analytics) |
+| Machine learning: quantile gradient boosting, conformal prediction, SHAP, clustering, graphs | [`salary_model.py`](src/stackscope/analytics/salary_model.py), [`segments.py`](src/stackscope/analytics/segments.py), [`network.py`](src/stackscope/analytics/network.py) |
+| Data quality and testing: 28-check gate, 103 tests, CI | [`quality/checks.py`](src/stackscope/quality/checks.py), [`tests/`](tests) |
+| Communicating insight: findings, recommendations, limitations | [research note](reports/research_note.md), [walkthrough notebook](notebooks/01_analysis_walkthrough.ipynb) |
+| Full-stack delivery: API, dashboard, serverless deployment | [`api/`](src/stackscope/api), [`web/`](web), [Deployment](#deployment) |
 
 ## Architecture
 
@@ -94,9 +152,10 @@ flowchart LR
   Q --> RN
 ```
 
-## Why this dataset is hard
+### Why this dataset is hard
 
 The survey is published as nine unrelated files, and the pipeline has to reconcile all of them:
+
 - Column names change every year.
 - Options are renamed, split, merged and moved between questions. Node.js was a framework, then "misc tech", then a
   language, then a web framework.
@@ -105,9 +164,71 @@ The survey is published as nine unrelated files, and the pipeline has to reconci
 - Publisher defects exist, such as two swapped AI columns in 2023.
 - The respondent mix shifts from wave to wave.
 
-The pipeline handles all of this explicitly. See [docs/methodology.md](docs/methodology.md) for every decision.
+The pipeline handles each of these explicitly; [docs/methodology.md](docs/methodology.md) records every decision.
 
-## Run it
+## Deployment
+
+The live site runs on Vercel's Hobby plan. Vercel's CDN serves the React build, and every `/api/*` request goes to a
+single Python function (FastAPI) in Mumbai (`bom1`). The function reads the DuckDB warehouse from its own bundle.
+
+```mermaid
+flowchart LR
+  U[Browser] -->|pages, scripts, fonts| CDN[Vercel CDN<br/>React build]
+  U -->|/api/*| FN[Python function, bom1<br/>FastAPI]
+  FN --> WH[(DuckDB warehouse<br/>93.6 MB, read-only)]
+  FN --> ML[Salary models<br/>LightGBM C API]
+```
+
+Fitting a 664k-respondent warehouse, a SQL engine and an ML model into one serverless function took a few deliberate
+decisions:
+
+| Constraint | Decision |
+|---|---|
+| A Python function may be at most 225 MB unzipped. The full analytics stack (NumPy, SciPy, pandas) would take it to about 450 MB. | The function installs its own slim manifest ([`api/pyproject.toml`](api/pyproject.toml)): FastAPI, DuckDB and LightGBM. uv overrides drop LightGBM's NumPy, SciPy and narwhals dependencies. The bundle is 187 MB. |
+| LightGBM's Python package imports SciPy. | The API scores the models through LightGBM's C API with ctypes ([`salary_runtime.py`](src/stackscope/analytics/salary_runtime.py)). Tests confirm predictions and SHAP values are identical to the Python package. |
+| Vercel's Python runtime has no OpenMP library, which LightGBM needs. | A copy of `libgomp.so.1` ships in [`api/lib/`](api/lib/README.md), with its source, checksums and licence. It loads only when the system has none. |
+| Hobby CLI uploads are capped at 100 MB per file. | The `compact` stage rewrites the warehouse from 103.8 MB to 93.6 MB and checks every table before replacing it. `make deploy-check` enforces the limit. |
+| The function's filesystem is read-only. | DuckDB opens the warehouse read-only and spills to the temp directory. The SQL lab cannot read other files or reach the network. |
+| Secrets must never leave the machine. | [`.vercelignore`](.vercelignore) is an allowlist. Only `api/`, `src/`, `config/`, the web sources, the warehouse, the models and the source manifest are uploaded. |
+| The warehouse is a build artefact, not in git. | Deploys run from the CLI after `make pipeline`. Git-triggered deployments are disabled in [`vercel.json`](vercel.json). |
+
+To deploy your own copy:
+
+```bash
+make pipeline          # build the warehouse and models (needs a Kaggle token; about 2 minutes)
+vercel link            # once: create or link a Vercel project
+make deploy-preview    # preview deployment
+make deploy            # production deployment
+```
+
+Both deploy targets run `make deploy-check` first.
+
+## API
+
+Interactive documentation lives at [`/api/docs`](https://stackscope-analytics.vercel.app/api/docs). The estimator and
+the SQL lab take a JSON body; everything else is a GET. Nothing writes to the warehouse.
+
+| Area | Endpoints |
+|---|---|
+| Overview | `GET /api/health`, `/api/meta`, `/api/overview` |
+| Technology | `GET /api/tech/trends?techs=`, `/quadrant?category=`, `/radar`, `/forecast?techs=`, `/movers`, `/selection`, `/trajectories`, `/concentration`, `/retention`, `/profile/{tech}` |
+| Talent | `GET /api/talent/benchmarks`, `/map`, `/premium?scope=`, `/trends`, `/estimator/options`; `POST /api/talent/estimate` |
+| Insight | `GET /api/segments`, `/segments/points`, `/network`, `/network/rules?tech=`, `/ai`, `/quality` |
+| SQL lab | `GET /api/sql/schema`, `/api/sql/examples`; `POST /api/sql/run` |
+
+```bash
+# A calibrated salary range (P10-P90, 2025 US dollars) with its SHAP explanation
+curl -s https://stackscope-analytics.vercel.app/api/talent/estimate \
+  -H 'content-type: application/json' \
+  -d '{"country": "IND", "years_code": 5, "technologies": ["Python", "SQL", "AWS"]}'
+
+# A read-only query against the warehouse (500-row cap, 10-second timeout)
+curl -s https://stackscope-analytics.vercel.app/api/sql/run \
+  -H 'content-type: application/json' \
+  -d '{"query": "SELECT survey_year, respondents FROM core.dim_year ORDER BY 1"}'
+```
+
+## Run it locally
 
 Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), Node 22+ and a free Kaggle API token.
 
@@ -115,48 +236,95 @@ Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), Node 22+ and a fre
 cp .env.example .env          # add your KAGGLE_API_TOKEN
 make setup                    # Python env + web dependencies
 make pipeline                 # download, harmonise, build warehouse, analytics, quality gate, reports (~2 min)
-make serve                    # dashboard + API on http://localhost:8000
+make serve                    # dashboard + API on http://localhost:8000 (docs at /api/docs)
 ```
 
-Development: run `make api` and `make web-dev` (hot reload on :5173). Other targets are `make test`, `make lint`,
-`make notebook` and `make docker-build && make docker-up`.
+For development, run `make api` and `make web-dev` (hot reload on :5173). The other targets are `make test`,
+`make test-unit`, `make lint`, `make notebook` and `make docker-build && make docker-up`; `make help` lists them all.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `KAGGLE_API_TOKEN` | none | Kaggle downloads (the `ingest` stage only) |
+| `STACKSCOPE_ROOT` | the repository | where `config/` and `reports/` live |
+| `STACKSCOPE_DATA` | `$STACKSCOPE_ROOT/data` | raw, silver, warehouse and model files |
+| `STACKSCOPE_DB` | `$STACKSCOPE_DATA/warehouse/stackscope.duckdb` | the warehouse file |
+
+## Pipeline stages
+
+`stackscope run` executes these in order. Use `--from <stage>` to resume or `--only <stage>` to run one.
+
+| Stage | What it does | Writes |
+|---|---|---|
+| `ingest` | Downloads the nine survey files from Kaggle and records a SHA-256 manifest | `data/raw/` |
+| `external` | Fetches World Bank PPP, exchange rates, GDP and population, and US CPI from FRED | `data/external/` |
+| `silver` | Maps each year's schema to one model, parses values, maps 448 answer labels to 309 technologies | `data/silver/` (Parquet) |
+| `core` | Builds the star schema: facts, bridges and dimensions | `core.*` |
+| `weights` | Rakes every wave to one reference mix and reports design effects | `core.respondent_weight`, `dq.weight_*` |
+| `marts` | Runs the versioned SQL marts: weighted shares with Wilson intervals, concentration, churn flows, pay benchmarks | `mart.*` |
+| `analytics` | Trends, quadrant, radar, forecasts, skill premiums, salary model, personas, network, GenAI drivers | `mart.*`, `ml.*`, `data/models/` |
+| `quality` | Runs the 28 checks; any failing blocker stops the run | `dq.*` |
+| `insights` | Generates the headline findings from the marts | `mart.key_findings` |
+| `compact` | Rewrites the warehouse into a smaller file after verifying every table | `data/warehouse/` |
+| `reports` | Builds the Excel pack, research note, Power BI export and data dictionary | `reports/`, `docs/data_dictionary.md` |
 
 ## Deliverables
 
-- **Dashboard:** 12 views with light and dark themes. Every chart has a data-table view and a CSV export.
-- **`reports/StackScope_Analyst_Pack.xlsx`:** a live Excel workbook. Its dashboard and summary are formulas (INDEX/MATCH,
-  CHOOSE, COUNTIFS, AVERAGEIFS, MAXIFS) with data validation, conditional formatting, a chart and a PivotTable-ready sheet.
-- **`reports/research_note.md`:** a written brief with findings, recommendations, methodology and limitations.
-- **`reports/bi/`:** the star schema as Parquet, plus `measures.dax` and `model.md` for Power BI or Tableau.
-- **`notebooks/01_analysis_walkthrough.ipynb`:** an executed walkthrough of the key analytical decisions.
-- **`docs/data_dictionary.md`:** generated from the live warehouse catalog.
+- **Dashboard:** 12 views, [live](https://stackscope-analytics.vercel.app), with light and dark themes.
+- **[`reports/StackScope_Analyst_Pack.xlsx`](reports/StackScope_Analyst_Pack.xlsx):** a live Excel workbook. Its
+  dashboard and summary are formulas (INDEX/MATCH, CHOOSE, COUNTIFS, AVERAGEIFS, MAXIFS) with data validation,
+  conditional formatting, a chart and a PivotTable-ready sheet.
+- **[`reports/research_note.md`](reports/research_note.md):** a written brief with findings, recommendations, methodology
+  and limitations.
+- **[`reports/bi/`](reports/bi/model.md):** the star schema as Parquet (generated by `make pipeline`), plus
+  [`measures.dax`](reports/bi/measures.dax) and [`model.md`](reports/bi/model.md) for Power BI or Tableau.
+- **[`notebooks/01_analysis_walkthrough.ipynb`](notebooks/01_analysis_walkthrough.ipynb):** an executed walkthrough of
+  the key analytical decisions.
+- **[`docs/data_dictionary.md`](docs/data_dictionary.md):** generated from the live warehouse catalog.
+
+## Testing and quality
+
+- **Source reconciliation.** The row count for every wave matches the publisher's published total, and every raw file
+  has a checksum.
+- **Quality gate.** 28 automated checks across the DAMA dimensions; a failing blocking check stops the build.
+- **Tests.** 103 pytest tests: 92 unit tests and 11 integration tests that need the built warehouse. They cover the
+  value parsers, taxonomy, statistics (checked against statsmodels), raking, conformal coverage, the SQL sandbox, the
+  API contracts, warehouse invariants and the serving runtime's equivalence with LightGBM.
+- **CI.** GitHub Actions runs ruff, the unit tests, and the TypeScript type-check and production build on every push.
+- **Determinism.** Seeded, ordered and deterministic LightGBM, so two consecutive runs produce identical outputs
+  (verified by table fingerprints).
+- **Secrets.** The Kaggle token lives in `.env`, which is git-ignored and never uploaded: the Vercel upload is an
+  allowlist, and the container image receives only the built warehouse.
 
 ## Project structure
 
 ```
+api/                    Vercel entrypoint, slim runtime manifest + lockfile, bundled OpenMP runtime
 config/                 source registry, 309-technology taxonomy
 src/stackscope/
   ingest/               Kaggle download with provenance, World Bank + FRED clients
   harmonize/            per-year schemas, value parsers, taxonomy, countries, silver builder
-  warehouse/sql/        core star schema + marts (versioned SQL)
-  analytics/            weighting, stats, trends, landscape, forecast, premiums, salary model, personas, network, GenAI
+  warehouse/            build and compaction; sql/ holds the core star schema and marts (versioned SQL)
+  analytics/            weighting, stats, trends, landscape, forecast, premiums, salary model and its serving
+                        runtime, personas, network, GenAI
   quality/              data-quality gate
   reporting/            Excel pack, research note, BI export, data dictionary
   api/                  FastAPI app (routers per domain, sandboxed SQL lab)
   cli.py                pipeline orchestrator
 web/src/                React + TypeScript dashboard (pages, chart builders, design tokens)
-tests/                  99 tests: parsers, taxonomy, statistics, raking, conformal coverage, SQL sandbox, API, warehouse
+tests/                  103 tests
 notebooks/  docs/  reports/
+vercel.json             CDN + Python function, rewrites, region, git deploys off
+.vercelignore           upload allowlist
 ```
 
-## Quality and reproducibility
+## Tech stack
 
-- **Source reconciliation.** The row count for every wave matches the publisher's published total.
-- **Quality gate.** 28 automated checks; a failing blocking check stops the build.
-- **Determinism.** Seeded, ordered and deterministic LightGBM, so two consecutive runs produce identical outputs
-  (verified by table fingerprints).
-- **Tests and CI.** 99 tests plus lint and a type-checked frontend build, all run in GitHub Actions.
-- **Secrets.** The Kaggle token lives in `.env` (git-ignored). The container image only ever receives the built warehouse.
+- **Data and analytics:** Python 3.12, DuckDB, pandas, NumPy, SciPy, statsmodels, scikit-learn, LightGBM, networkx,
+  UMAP
+- **API:** FastAPI, Pydantic
+- **Dashboard:** React 19, TypeScript, Vite, TanStack Query, ECharts, React Router
+- **Reporting:** xlsxwriter (Excel), Jinja2 (research note), Parquet and DAX (Power BI)
+- **Delivery:** pytest, ruff, GitHub Actions, Docker, Vercel
 
 ## Limitations
 
@@ -167,4 +335,7 @@ breaks are flagged wherever they affect a comparison.
 ## Data and licences
 
 Stack Overflow Developer Survey 2017–2025 ([ODbL](https://opendatacommons.org/licenses/odbl/)), World Bank World
-Development Indicators (CC BY 4.0) and FRED CPI-U (public domain). Code: MIT.
+Development Indicators (CC BY 4.0) and FRED CPI-U (public domain). The bundled `api/lib/libgomp.so.1` is GPLv3+ with
+the GCC Runtime Library Exception; see [api/lib/README.md](api/lib/README.md). Code: MIT.
+
+Built by Garv Bahl ([@garvbahl37-gif](https://github.com/garvbahl37-gif)).
