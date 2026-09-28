@@ -1,0 +1,14 @@
+.git
+.env
+.venv
+.playwright-mcp
+web/node_modules
+web/dist
+reports/bi
+notebooks/.ipynb_checkpoints
+data/*
+!data/warehouse
+!data/models
+!data/raw
+data/raw/*
+!data/raw/manifest.json

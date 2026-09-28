@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="StackScope — developer technology market intelligence built on nine years of the Stack Overflow Developer Survey (664,042 responses)." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>StackScope — Technology Market Intelligence</title>
+    <script>
+      try {
+        const saved = localStorage.getItem("stackscope-theme");
+        if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

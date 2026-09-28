@@ -1,0 +1,430 @@
+# Canonical technology taxonomy — maps ~600 raw survey option labels (9 years, 13 questions) onto
+# one name per technology. Stack Overflow renames options, merges and splits them, and moves them
+# between questions from year to year; this file is the single source of truth for undoing that.
+#
+# Entry forms
+#   - Name                                  raw label == canonical name
+#   - {name: X, aliases: [...]}             several raw labels roll up to X (union within a year)
+#   - {..., fields: [database]}             only match labels that came from those question groups
+#   - {..., note: "..."}                    a known series break, surfaced in the dashboard
+#
+# Question groups: language, database, platform, webframe, misctech, toolstech, framework (2017-18),
+#                  ide, ai (2023 pools AISearch + AIDev; 2024 AISearchDev), ai_models (2025)
+
+categories:
+  language: Languages
+  database: Databases
+  cloud: Cloud Platforms
+  webframe: Web Frameworks & Runtimes
+  library: Libraries & Frameworks
+  devops: DevOps & Infrastructure
+  buildtool: Build & Package Tools
+  ide: IDEs & Editors
+  ai: AI Assistants & Models
+
+technologies:
+  language:
+    - JavaScript
+    - TypeScript
+    - Python
+    - Java
+    - C#
+    - C++
+    - C
+    - PHP
+    - {name: SQL, aliases: [SQL, Sql]}
+    - {name: HTML/CSS, aliases: [HTML/CSS, HTML, CSS], note: "2018 asked HTML and CSS separately; merged as a union."}
+    - {name: Bash/Shell, aliases: [Bash/Shell, Bash/Shell/PowerShell, "Bash/Shell (all shells)"], note: "2019-2020 option also included PowerShell."}
+    - {name: PowerShell, aliases: [PowerShell], note: "Listed separately from 2021."}
+    - Go
+    - Rust
+    - Kotlin
+    - Swift
+    - Objective-C
+    - Ruby
+    - Dart
+    - R
+    - Scala
+    - Lua
+    - Perl
+    - Haskell
+    - Elixir
+    - Erlang
+    - Clojure
+    - F#
+    - Julia
+    - Groovy
+    - {name: MATLAB, aliases: [Matlab, MATLAB]}
+    - VBA
+    - {name: Visual Basic, aliases: [VB.NET, Visual Basic 6, "Visual Basic (.Net)"]}
+    - Assembly
+    - {name: Delphi, aliases: [Delphi/Object Pascal, Delphi]}
+    - {name: COBOL, aliases: [Cobol, COBOL]}
+    - Fortran
+    - {name: OCaml, aliases: [Ocaml, OCaml]}
+    - {name: Lisp, aliases: [Common Lisp, LISP, Lisp]}
+    - Zig
+    - Solidity
+    - Crystal
+    - Nim
+    - GDScript
+    - Prolog
+    - Ada
+    - Apex
+    - SAS
+    - APL
+    - Gleam
+    - Mojo
+    - MicroPython
+    - Raku
+    - CoffeeScript
+    - Hack
+    - Smalltalk
+    - WebAssembly
+
+  database:
+    - MySQL
+    - PostgreSQL
+    - SQLite
+    - MongoDB
+    - Redis
+    - MariaDB
+    - Oracle
+    - Elasticsearch
+    - Cassandra
+    - Couchbase
+    - {name: Microsoft SQL Server, aliases: [SQL Server, Microsoft SQL Server]}
+    - {name: DynamoDB, aliases: [Amazon DynamoDB, DynamoDB, Dynamodb]}
+    - {name: IBM Db2, aliases: [IBM Db2, IBM DB2]}
+    - {name: Neo4j, aliases: [Neo4j, Neo4J]}
+    - {name: Firebase Realtime DB, aliases: [Firebase, Firebase Realtime Database], fields: [database]}
+    - Cloud Firestore
+    - {name: BigQuery, aliases: [Google BigQuery, BigQuery]}
+    - Amazon Redshift
+    - {name: Amazon RDS/Aurora, aliases: [Amazon RDS/Aurora]}
+    - Snowflake
+    - {name: Supabase, aliases: [Supabase], fields: [database]}
+    - {name: Databricks, aliases: [Databricks SQL]}
+    - {name: ClickHouse, aliases: [Clickhouse]}
+    - DuckDB
+    - InfluxDB
+    - {name: CockroachDB, aliases: [Cockroachdb]}
+    - {name: CouchDB, aliases: [CouchDB, Couch DB]}
+    - Cosmos DB
+    - H2
+    - Microsoft Access
+    - Solr
+    - Firebird
+    - Memcached
+    - {name: Apache Hive, aliases: [Apache Hive]}
+    - {name: Apache HBase, aliases: [Apache HBase]}
+    - Valkey
+    - {name: PocketBase, aliases: [Pocketbase]}
+    - Presto
+    - Datomic
+    - RavenDB
+    - TiDB
+    - EventStoreDB
+
+  cloud:
+    - {name: AWS, aliases: [AWS, Amazon Web Services (AWS)]}
+    - {name: Microsoft Azure, aliases: [Azure, Microsoft Azure], fields: [platform]}
+    - {name: Google Cloud, aliases: [Google Cloud Platform/App Engine, Google Cloud Platform, Google Cloud]}
+    - {name: IBM Cloud, aliases: [IBM Cloud or Watson, IBM Cloud Or Watson, IBM Cloud]}
+    - {name: Oracle Cloud, aliases: [Oracle Cloud Infrastructure, Oracle Cloud Infrastructure (OCI)]}
+    - {name: DigitalOcean, aliases: [DigitalOcean, Digital Ocean]}
+    - Heroku
+    - {name: Firebase, aliases: [Firebase], fields: [platform, framework]}
+    - Cloudflare
+    - Vercel
+    - Netlify
+    - Hetzner
+    - {name: Linode (Akamai), aliases: [Linode, "Linode, now Akamai"]}
+    - OVH
+    - Fly.io
+    - Render
+    - Vultr
+    - Scaleway
+    - OpenShift
+    - OpenStack
+    - VMware
+    - Alibaba Cloud
+    - Railway
+    - PythonAnywhere
+
+  webframe:
+    - {name: React, aliases: [React, React.js]}
+    - {name: Angular, aliases: [AngularJS, Angular, Angular/Angular.js, Angular.js], note: "Angular (2+) and AngularJS (1.x) merged into one family for comparability."}
+    - Vue.js
+    - {name: Node.js, aliases: [Node.js], note: "Question moved: framework (2017-18), misc tech (2019-20), languages (2021), web frameworks (2022+)."}
+    - Express
+    - Next.js
+    - Nuxt.js
+    - Svelte
+    - jQuery
+    - Django
+    - Flask
+    - FastAPI
+    - Ruby on Rails
+    - Laravel
+    - Symfony
+    - {name: ASP.NET, aliases: [ASP.NET, ASP.NET Core, ASP.NET CORE]}
+    - {name: Spring, aliases: [Spring, Spring Boot, Spring Framework]}
+    - NestJS
+    - Blazor
+    - Gatsby
+    - Drupal
+    - WordPress
+    - Deno
+    - Bun
+    - Phoenix
+    - Fastify
+    - Remix
+    - Astro
+    - {name: htmx, aliases: [Htmx]}
+    - Solid.js
+    - Qwik
+    - Play Framework
+    - CodeIgniter
+    - Strapi
+    - {name: Yii, aliases: [Yii 2]}
+    - Lit
+    - Elm
+    - Axum
+
+  library:
+    - {name: .NET, aliases: [.NET Core, .NET, .NET Framework, .NET Core / .NET 5, .NET (5+), .NET Framework (1.0 - 4.8)], note: "2017-2018 listed only .NET Core."}
+    - NumPy
+    - Pandas
+    - {name: Scikit-learn, aliases: [Scikit-learn, Scikit-Learn]}
+    - TensorFlow
+    - {name: PyTorch, aliases: [Torch/PyTorch]}
+    - Keras
+    - Hugging Face Transformers
+    - {name: Apache Spark, aliases: [Spark, Apache Spark]}
+    - Hadoop
+    - Apache Kafka
+    - RabbitMQ
+    - {name: OpenCV, aliases: [Opencv]}
+    - CUDA
+    - JAX
+    - Tidyverse
+    - {name: MLflow, aliases: [mlflow]}
+    - React Native
+    - Flutter
+    - Xamarin
+    - Cordova
+    - Ionic
+    - Capacitor
+    - .NET MAUI
+    - SwiftUI
+    - Electron
+    - Tauri
+    - Qt
+    - GTK
+    - Uno Platform
+    - {name: Unity, aliases: [Unity 3D]}
+    - Unreal Engine
+    - Godot
+    - CryEngine
+    - OpenGL
+    - DirectX
+    - OpenCL
+    - Quarkus
+    - Micronaut
+    - Ktor
+
+  devops:
+    - Docker
+    - Kubernetes
+    - {name: Terraform, aliases: [Terraform, Teraform]}
+    - Ansible
+    - Puppet
+    - Chef
+    - Pulumi
+    - Podman
+    - Prometheus
+    - Datadog
+    - Splunk
+    - New Relic
+    - Dagger
+
+  buildtool:
+    - npm
+    - Yarn
+    - pnpm
+    - Pip
+    - Poetry
+    - Homebrew
+    - Chocolatey
+    - APT
+    - Pacman
+    - Nix
+    - NuGet
+    - Composer
+    - Cargo
+    - {name: Maven, aliases: [Maven (build tool)]}
+    - Gradle
+    - Ant
+    - Make
+    - CMake
+    - Ninja
+    - Meson
+    - MSBuild
+    - Webpack
+    - Vite
+    - GNU GCC
+    - {name: Clang, aliases: [LLVM's Clang]}
+    - MSVC
+
+  ide:
+    - Visual Studio Code
+    - Visual Studio
+    - {name: IntelliJ IDEA, aliases: [IntelliJ, IntelliJ IDEA]}
+    - Notepad++
+    - Vim
+    - Neovim
+    - Emacs
+    - Sublime Text
+    - Atom
+    - Eclipse
+    - {name: NetBeans, aliases: [NetBeans, Netbeans]}
+    - PyCharm
+    - Android Studio
+    - Xcode
+    - {name: Jupyter, aliases: [IPython / Jupyter, IPython/Jupyter, Jupyter Notebook/JupyterLab, IPython]}
+    - RStudio
+    - {name: PhpStorm, aliases: [PHPStorm, PhpStorm]}
+    - {name: WebStorm, aliases: [Webstorm, WebStorm]}
+    - Rider
+    - CLion
+    - {name: GoLand, aliases: [GoLand, Goland]}
+    - DataGrip
+    - RubyMine
+    - Nano
+    - VSCodium
+    - Fleet
+    - Helix
+    - Kate
+    - Spyder
+    - Qt Creator
+    - Code::Blocks
+    - {name: RAD Studio, aliases: ["RAD Studio (Delphi, C++ Builder)", "Rad Studio (Delphi, C++ Builder)"]}
+    - Geany
+    - BBEdit
+    - TextMate
+    - Cursor
+    - Zed
+    - Windsurf
+    - RustRover
+    - Trae
+
+  ai:
+    - {name: ChatGPT / OpenAI, aliases: [ChatGPT, openAI GPT (chatbot models), openAI Reasoning models, openAI Image generating models, OpenAI Codex], note: "2023-24 asked about tools; 2025 asked about model families."}
+    - GitHub Copilot
+    - {name: Google Gemini, aliases: [Google Bard AI, Google Gemini, Gemini (Flash general purpose models), Gemini (Pro Reasoning models)], note: "Google Bard (2023) was renamed Gemini."}
+    - {name: Microsoft Copilot (Bing), aliases: [Bing AI]}
+    - {name: Claude, aliases: [Claude, "Anthropic: Claude Sonnet"]}
+    - Claude Code
+    - {name: DeepSeek, aliases: [DeepSeek (R- Reasoning models), DeepSeek (V- General purpose models)]}
+    - {name: Meta Llama, aliases: [Meta AI, Meta Llama (all models)]}
+    - {name: Grok, aliases: [X Grok models]}
+    - {name: Mistral, aliases: [Mistral AI models]}
+    - {name: Perplexity, aliases: [Perplexity AI, Perplexity Sonar models]}
+    - {name: Qwen, aliases: [Alibaba Cloud Qwen models]}
+    - {name: Microsoft Phi, aliases: [Microsoft Phi-4 models]}
+    - {name: Amazon Q, aliases: [AWS CodeWhisperer, Amazon Q]}
+    - Tabnine
+    - Codeium
+    - Phind
+    - WolframAlpha
+    - {name: Visual Studio IntelliCode, aliases: [Visual Studio Intellicode]}
+    - You.com
+    - Cody
+    - {name: Poe, aliases: [Quora Poe]}
+    - {name: Snyk Code, aliases: [Synk Code, Snyk Code]}
+    - Replit Ghostwriter
+    - Whispr AI
+    - Aider
+    - {name: Cline / Roo, aliases: [Cline and/or Roo]}
+    - {name: Lovable, aliases: [Lovable.dev]}
+    - Bolt
+
+# Labels that are deliberately out of scope (operating systems, devices, collaboration suites,
+# test frameworks, catch-all "Other" options). They are counted in the mapping-coverage report
+# as "excluded" rather than "unmapped", so an unmapped label always means a gap to fix.
+excluded:
+  - "Other(s):"
+  - Flow
+  - Zephyr
+  - Managed Hosting
+  - Colocation
+  - Serverless
+  - Salesforce
+  - SharePoint
+  - Mainframe
+  - Predix
+  - Windows Desktop
+  - Windows Desktop or Server
+  - Windows
+  - Windows Phone
+  - Linux
+  - Linux Desktop
+  - Mac OS
+  - MacOS
+  - Android
+  - iOS
+  - Raspberry Pi
+  - Arduino
+  - ESP8266
+  - Amazon Echo
+  - Google Home
+  - Apple Watch or Apple TV
+  - Gaming console
+  - Slack
+  - Slack Apps and Integrations
+  - Microsoft Azure (Tables, CosmosDB, SQL, etc)
+  - Google Cloud Storage
+  - Supabase
+  - Databricks
+  - Yandex Cloud
+  - Git
+  - Visual Studio Solution
+  - Ruff
+  - Roslyn
+  - MFC
+  - Google Test
+  - Catch2
+  - doctest
+  - cppunit
+  - Boost.Test
+  - build2
+  - SCons
+  - QMake
+  - tunit
+  - lest
+  - snitch
+  - CUTE
+  - ELFspy
+  - liblittletest
+  - bandit
+  - Wasmer
+  - Micro
+  - Nova
+  - Coda
+  - Komodo
+  - Zend
+  - Light Table
+  - Spacemacs
+  - condo
+  - Neeva AI
+  - Andi
+  - Metaphor
+  - Mintlify
+  - Adrenaline
+  - Rubber Duck.AI
+  - Lightning AI
+  - AskCodi
+  - Amazon Titan models
+  - "Cohere: Command A"
+  - Reka (Flash 3 or other Reka models)

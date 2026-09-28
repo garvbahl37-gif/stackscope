@@ -1,0 +1,24 @@
+# secrets
+.env
+
+# data & build artefacts (reproducible with `make pipeline`)
+data/
+reports/bi/
+web/dist/
+web/node_modules/
+
+# python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# tooling
+.vercel/
+.playwright-mcp/
+.DS_Store
+
+# private notes
+RESUME_NOTES.md

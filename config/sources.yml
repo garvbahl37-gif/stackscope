@@ -1,0 +1,29 @@
+# Source registry — every dataset the pipeline touches, where it comes from, and what we expect.
+# expected_rows = respondent counts published by Stack Overflow with each year's results;
+# the quality layer reconciles the downloaded files against them (source reconciliation check).
+
+survey:
+  2017: {kaggle: stackoverflow/so-survey-2017,                              file: survey_results_public.csv,                         expected_rows: 51392,  publisher_upload: true}
+  2018: {kaggle: stackoverflow/stack-overflow-2018-developer-survey,         file: survey_results_public.csv,                         expected_rows: 98855,  publisher_upload: true}
+  2019: {kaggle: mchirico/stack-overflow-developer-survey-results-2019,      file: survey_results_public.csv,                         expected_rows: 88883,  publisher_upload: false}
+  2020: {kaggle: aitzaz/stack-overflow-developer-survey-2020,                file: developer_survey_2020/survey_results_public.csv,   expected_rows: 64461,  publisher_upload: false}
+  2021: {kaggle: ruchi798/stack-overflow-annual-developer-survey-2021,       file: survey_results_responses.csv,                      expected_rows: 83439,  publisher_upload: false}
+  2022: {kaggle: dheemanthbhat/stack-overflow-annual-developer-survey-2022,  file: survey_results_public.csv,                         expected_rows: 73268,  publisher_upload: false}
+  2023: {kaggle: stackoverflow/stack-overflow-2023-developers-survey,        file: survey_results_public.csv,                         expected_rows: 89184,  publisher_upload: true}
+  2024: {kaggle: berkayalan/stack-overflow-annual-developer-survey-2024,     file: survey_results_public.csv,                         expected_rows: 65437,  publisher_upload: false}
+  2025: {kaggle: edoardogalli/stack-overflow-annual-developer-survey-2025,   file: survey_results_public.csv,                         expected_rows: 49123,  publisher_upload: false}
+
+# Macro-economic context used to normalise compensation across years and countries.
+world_bank:
+  base_url: https://api.worldbank.org/v2
+  indicators:
+    PA.NUS.PPP: ppp_factor                # PPP conversion factor, GDP (LCU per international $)
+    PA.NUS.FCRF: fx_rate                  # official exchange rate (LCU per US$) -> price level = ppp / fx
+    NY.GDP.PCAP.PP.CD: gdp_pc_ppp         # GDP per capita, PPP (current international $)
+    SP.POP.TOTL: population
+  years: [2015, 2025]
+
+fred:
+  # US CPI-U, monthly, seasonally adjusted — converts nominal USD pay to constant dollars.
+  cpi_series: CPIAUCSL
+  url: https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL

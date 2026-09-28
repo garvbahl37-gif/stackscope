@@ -1,0 +1,92 @@
+/* ==========================================================================================
+   StackScope design tokens
+   Petrol-ink instrument chrome on a cool mineral plane; charts use the validated categorical
+   palette (dataviz reference instance), re-validated against both chart surfaces below.
+   ========================================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* planes & surfaces */
+  --plane: #e9eeed;
+  --surface: #fcfcfb;          /* chart surface (validated) */
+  --surface-2: #f3f6f5;        /* insets, table stripes, inputs */
+  --surface-3: #e4eae9;        /* pressed / selected wash */
+
+  /* instrument chrome (navigation rail) */
+  --rail: #0f2a33;
+  --rail-ink: #e8f0f0;
+  --rail-ink-2: #97adb1;
+  --rail-line: #22404a;
+  --rail-active: #1b3d48;
+
+  /* ink */
+  --ink: #0f2a33;              /* petrol ink for primary text */
+  --ink-2: #48595f;
+  --ink-3: #75858a;
+  --line: #d9e0de;
+  --line-strong: #bfcac8;
+
+  /* interactive */
+  --brand: #0e6679;
+  --brand-hover: #0b5566;
+  --brand-ink: #ffffff;
+  --brand-soft: #d8eaee;
+  --focus: #0e6679;
+
+  /* chart chrome */
+  --grid: #e3e7e5;
+  --axis: #c3c9c6;
+  --axis-ink: #7a8589;
+  --deemph: #b9c3c2;           /* "the rest" in emphasis charts */
+
+  /* categorical (fixed order, never cycled) */
+  --s1: #2a78d6;  --s2: #eb6834;  --s3: #1baf7a;  --s4: #eda100;
+  --s5: #e87ba4;  --s6: #008300;  --s7: #4a3aa7;  --s8: #e34948;
+
+  /* sequential blue 100 -> 700 */
+  --q1: #cde2fb; --q2: #9ec5f4; --q3: #6da7ec; --q4: #3987e5; --q5: #256abf; --q6: #184f95; --q7: #0d366b;
+
+  /* diverging blue <-> red, neutral gray midpoint */
+  --d-neg-2: #b93c3b; --d-neg-1: #e98a89; --d-mid: #e6e5e1; --d-pos-1: #86b6ef; --d-pos-2: #256abf;
+
+  /* status (fixed, never themed; always with icon + label) */
+  --good: #0ca30c; --good-ink: #006300; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+
+  --radius-hero: 18px;
+  --radius-panel: 12px;
+  --radius-control: 8px;
+  --shadow-pop: 0 12px 32px -12px rgba(15, 42, 51, 0.28);
+
+  --font: "Archivo Variable", "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane: #0d1417; --surface: #161c1f; --surface-2: #1c2427; --surface-3: #243034;
+    --rail: #091013; --rail-ink: #e6eeee; --rail-ink-2: #8aa1a6; --rail-line: #1a292e; --rail-active: #14252b;
+    --ink: #eef3f3; --ink-2: #b3c0c2; --ink-3: #82918f; --line: #263034; --line-strong: #34434a;
+    --brand: #56b6cb; --brand-hover: #74c6d8; --brand-ink: #081215; --brand-soft: #16363e; --focus: #74c6d8;
+    --grid: #232d31; --axis: #3a474c; --axis-ink: #85928f; --deemph: #3f4d52;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --q1: #184f95; --q2: #1c5cab; --q3: #256abf; --q4: #2a78d6; --q5: #5598e7; --q6: #86b6ef; --q7: #cde2fb;
+    --d-neg-2: #e66767; --d-neg-1: #9c4a4a; --d-mid: #383835; --d-pos-1: #1c5cab; --d-pos-2: #5598e7;
+    --good-ink: #0ca30c;
+    --shadow-pop: 0 16px 36px -12px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane: #0d1417; --surface: #161c1f; --surface-2: #1c2427; --surface-3: #243034;
+  --rail: #091013; --rail-ink: #e6eeee; --rail-ink-2: #8aa1a6; --rail-line: #1a292e; --rail-active: #14252b;
+  --ink: #eef3f3; --ink-2: #b3c0c2; --ink-3: #82918f; --line: #263034; --line-strong: #34434a;
+  --brand: #56b6cb; --brand-hover: #74c6d8; --brand-ink: #081215; --brand-soft: #16363e; --focus: #74c6d8;
+  --grid: #232d31; --axis: #3a474c; --axis-ink: #85928f; --deemph: #3f4d52;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --q1: #184f95; --q2: #1c5cab; --q3: #256abf; --q4: #2a78d6; --q5: #5598e7; --q6: #86b6ef; --q7: #cde2fb;
+  --d-neg-2: #e66767; --d-neg-1: #9c4a4a; --d-mid: #383835; --d-pos-1: #1c5cab; --d-pos-2: #5598e7;
+  --good-ink: #0ca30c;
+  --shadow-pop: 0 16px 36px -12px rgba(0, 0, 0, 0.6);
+}
