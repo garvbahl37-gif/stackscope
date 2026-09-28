@@ -21,7 +21,8 @@ This document records every analytical decision behind StackScope, why it was ma
 | FRED CPIAUCSL (US CPI-U, monthly) | 2010–2026 | annualised | public domain |
 
 Raw files are fingerprinted (SHA-256) in `data/raw/manifest.json`, and the quality gate reconciles each wave's row count
-with the total Stack Overflow published (all nine match exactly).
+with the publisher's released data file (all nine match exactly). The report headlines differ slightly for 2018 (101,592
+surveyed, 98,855 released), 2020 (about 65,000) and 2025 (49,009 used in the report, 49,123 released).
 
 ## 3. Pipeline
 
@@ -106,10 +107,19 @@ analysis region, respondent type and coding-experience band.
 | Adoption | weighted share of question-answerers who used the technology in the past year |
 | Desire | weighted share who want to work with it next year |
 | Retention | among current users who were asked about next year, the share who want to keep it (1 − churn intent) |
+| Churn flow | churners of X (users who did not pick X for next year) who want Y in the same category and do not use it yet; shares and ranks are weighted, net migration is counted in respondents |
 | Attraction | among non-users asked about next year, the share who want to start |
 | Net desire | desire − adoption |
 | Mindshare | a technology's share of all usage mentions in its category |
 | HHI | Σ mindshare² × 10,000 (<1,500 competitive, 1,500–2,500 moderately concentrated, >2,500 highly concentrated) |
+| HHI, like for like | a chain-linked HHI: each pair of consecutive waves is compared only on the technologies listed in both, and the steps are chained back from the latest wave (so it equals the latest HHI) |
+
+**Why like for like.** The survey's option lists change between waves. The cloud question listed 3 platforms in 2017, 6
+in 2018, 23 in 2024 and 11 in 2025, and adding options lowers the HHI by itself. Measured over whatever was listed, cloud
+mindshare appears to fragment (HHI 2,286 in 2018 to 1,466 in 2025). Measured like for like, it did not: on the six
+platforms listed in both years, AWS, Azure and Google Cloud grew from 65% to 81% of mentions. Concentration trends in the
+dashboard and the research note therefore use the like-for-like index, and each wave's own HHI is shown only as a
+snapshot.
 
 ## 8. Statistical inference
 
@@ -155,7 +165,8 @@ The model is OLS on ln(real pay):
 
 Standard errors are HC1 robust and q-values are Benjamini–Hochberg. The model is fitted separately for Global
 (n = 71,318, R² 0.68), United States, India and Western Europe. The raw median gap is shown next to each adjusted premium:
-controls shrink the typical gap 4.4×. These are associations, not causal effects.
+across all modelled technologies, the median raw gap is 4.4 times the median adjusted premium. These are
+associations, not causal effects.
 
 ## 12. Salary estimator (`analytics/salary_model.py`)
 
@@ -197,7 +208,21 @@ ratios against named reference levels.
 
 ## 16. Data quality (`quality/checks.py`)
 
-28 automated checks across the DAMA dimensions, run on every build. Failing blocking checks stop the pipeline.
+29 automated checks across the DAMA dimensions, run on every build. Failing blocking checks stop the pipeline.
+
+**Reconciliation with published results** (`quality/reconcile.py`). `config/published_benchmarks.yml` holds 120 figures
+from Stack Overflow's results pages, each with its source link. The warehouse recomputes each one unweighted with the
+publisher's definition:
+- **Usage shares.** For 2017, the base is respondents who chose any technology; otherwise it is the respondents who
+  answered the question.
+- **"Admired".** Users who want to keep the technology, over all of its users.
+- **AI answers.** The 2023 base is all respondents.
+
+92 figures on the same definition agree within 0.46 percentage points, and every published count of users (19 of them,
+direct or implied by a published share and base) is reproduced exactly. For database and cloud shares in 2019–2025, the
+publisher divides by more respondents than the public file shows as answering (up to 16% more in 2021), so those shares
+are compared on counts only. The 2018, 2020 and 2025 report totals count a different set of responses from the one
+released in the public file.
 - **Accuracy:** source reconciliation, provenance hashes, raking convergence, design effect.
 - **Uniqueness:** unique keys, duplicate submissions.
 - **Integrity:** foreign keys.

@@ -46,33 +46,40 @@ A suggested path through the [live dashboard](https://stackscope-analytics.verce
 
 1. **Overview.** Press play on the quadrant to watch nine years of market movement, then switch between languages,
    databases, cloud platforms and web frameworks.
-2. **Retention & churn.** The churn-flow diagram shows where each technology's leavers want to go: 51% of Java users
+2. **Retention & churn.** The churn-flow diagram shows where each technology's leavers want to go: 52% of Java users
    don't want to keep using it, and Rust is their first choice.
 3. **Pay & skills.** Skill premiums are estimated after controlling for country, experience, role, company size,
-   education and industry. AWS is worth +6.8%, against a raw gap of +27%.
+   education and industry. AWS, the largest premium among widely used skills, is worth +6.8%, against a raw gap of +27%.
 4. **Salary estimator.** Change the country or add a technology. The estimate comes back as a calibrated P10–P90 range
    with an explanation of what drives it.
-5. **Data quality.** Browse the 28 automated checks behind every number, including publisher defects the pipeline caught.
+5. **Data quality.** Browse the 29 automated checks behind every number, and see 92 of Stack Overflow's own published
+   figures reproduced within half a percentage point.
 6. **SQL lab.** Run one of the ten showcase queries, or write your own, against the full warehouse in a read-only
    sandbox.
 
 ## What the data says
 
-Every figure below is computed by the pipeline. The dashboard and the [research note](reports/research_note.md) render
-them from the warehouse, so they cannot drift from the data.
+Every figure below is computed by the pipeline, and an independent audit recomputes each one from the base tables. The
+dashboard and the [research note](reports/research_note.md) render them from the warehouse, so they cannot drift from the
+data. Shares are weighted to a constant respondent mix so years are comparable. They can differ by a point or two from Stack
+Overflow's published results, which are unweighted. Recomputed unweighted with the publisher's own definitions, 92 of
+those published figures agree within half a percentage point (see the reconciliation on the Data quality page).
 
 - **GenAI adoption reached 80% while trust turned negative.** Use of AI tools rose from 46% (2023) to 80% (2025), while
-  the share who distrust AI output grew from 26% to 44%.
+  the share who distrust AI output grew from 26% to 44% (unweighted: 44% to 78% using, 27% to 46% distrusting).
 - **Experience, not age, drives AI scepticism.** Holding age, role, region and company size constant, developers with 21+
   years of coding have 0.59× the odds of trusting AI output compared with those with 6–10 years (95% CI 0.54–0.66).
 - **Rust is the fastest-rising established language.** Its odds of use grew 34% a year (95% CI 26–42%): from 1.1% of
   developers in 2017 to 15.2% in 2025, with 80% of users wanting to keep it.
 - **PostgreSQL overtook MySQL in 2023** and leads 57% to 43% in 2025. It is also the top destination for developers
   leaving MySQL.
-- **51% of Java users don't want to keep using it next year.** Rust is their first choice (26% of leavers).
-- **AWS carries the largest broad-based pay premium, +6.8%**, after controlling for country, experience, role, company
-  size, education and industry. The raw gap is +27%. In India the strongest premium is Go (+14%).
-- **Cloud mindshare is fragmenting.** The Herfindahl index fell from 2,286 to 1,466 between 2018 and 2025.
+- **52% of Java users don't want to keep using it next year.** Rust is their first choice (26% of leavers).
+- **AWS carries the largest pay premium among widely used skills, +6.8%**, after controlling for country, experience,
+  role, company size, education and industry. The raw gap is +27%. Niche skills can pay more (Snowflake, used by 3% of
+  developers: +9.1%). In India the largest premium among widely used skills is Go (+14%).
+- **AWS, Azure and Google Cloud consolidated the established cloud market.** On the six platforms listed in both 2018 and
+  2025, their share of mentions rose from 65% to 81% as Heroku faded. Platforms added to the survey since, led by
+  Cloudflare and Vercel, now take 31% of all cloud mentions.
 - **Real developer pay rose 27% since 2017** once the country mix is held fixed; the raw median suggests only 15%.
 - **Adoption moves like a random walk.** Five forecasting models were backtested and none beat "same as last year", so
   projections are shown as calibrated ranges rather than trend lines.
@@ -82,7 +89,7 @@ them from the warehouse, so they cannot drift from the data.
 | View | What it answers | Methods |
 |---|---|---|
 | Overview | The market at a glance; the headline findings | animated quadrant, generated findings |
-| Market landscape | Who leads, challenges, innovates or is niche, in 9 categories | momentum z-scores, HHI, CR3, mindshare |
+| Market landscape | Who leads, challenges, innovates or is niche, in 9 categories | momentum z-scores, like-for-like HHI, CR3, mindshare |
 | Technology radar | Adopt, trial, assess or hold | rule-based rings, multi-year significance tests |
 | Adoption & forecasts | Real trends vs noise; what 2026–27 may look like | Wilson intervals, raking, BH-FDR, weighted logistic trends, backtested forecasts |
 | Retention & churn | Who keeps its users and where the leavers go | retention/attraction segmentation, churn-flow Sankey, net migration |
@@ -91,7 +98,7 @@ them from the warehouse, so they cannot drift from the data.
 | Salary estimator | A calibrated pay range for any profile, explained | LightGBM quantile regression, conformal calibration, TreeSHAP |
 | Developer personas | Segments by actual stack, not job title | TF-IDF, SVD, spherical k-means, silhouette, UMAP |
 | AI adoption & trust | Who adopts, who trusts, and why | weighted Likert analysis, logistic regression odds ratios |
-| Data quality | Can the numbers be trusted? | 28 automated checks (DAMA dimensions), lineage, completeness matrix |
+| Data quality | Can the numbers be trusted? | 29 automated checks (DAMA dimensions), reconciliation with Stack Overflow's published results, lineage, completeness |
 | SQL lab | Query the warehouse directly | sandboxed read-only DuckDB, 10 showcase queries |
 
 Every chart has a data-table view and a CSV export, and the dashboard has light and dark themes.
@@ -114,7 +121,7 @@ Every chart has a data-table view and a CSV export, and the dashboard has light 
 | Power BI: star-schema export with DAX measures | [`reports/bi/measures.dax`](reports/bi/measures.dax), [`reports/bi/model.md`](reports/bi/model.md) |
 | Statistics: survey weighting, confidence intervals, multiple-testing control, regression | [methodology](docs/methodology.md), [`analytics/`](src/stackscope/analytics) |
 | Machine learning: quantile gradient boosting, conformal prediction, SHAP, clustering, graphs | [`salary_model.py`](src/stackscope/analytics/salary_model.py), [`segments.py`](src/stackscope/analytics/segments.py), [`network.py`](src/stackscope/analytics/network.py) |
-| Data quality and testing: 28-check gate, 103 tests, CI | [`quality/checks.py`](src/stackscope/quality/checks.py), [`tests/`](tests) |
+| Data quality and testing: 29-check gate, reconciliation with published results, 108 tests, CI | [`quality/checks.py`](src/stackscope/quality/checks.py), [`tests/`](tests) |
 | Communicating insight: findings, recommendations, limitations | [research note](reports/research_note.md), [walkthrough notebook](notebooks/01_analysis_walkthrough.ipynb) |
 | Full-stack delivery: API, dashboard, serverless deployment | [`api/`](src/stackscope/api), [`web/`](web), [Deployment](#deployment) |
 
@@ -123,7 +130,7 @@ Every chart has a data-table view and a CSV export, and the dashboard has light 
 ```mermaid
 flowchart LR
   subgraph Sources
-    K[Kaggle: 9 survey files<br/>1.1 GB, 924 columns]
+    K[Kaggle: 9 survey files<br/>1.2 GB, 924 columns]
     W[World Bank API<br/>PPP, FX, GDP]
     F[FRED<br/>US CPI-U]
   end
@@ -134,7 +141,7 @@ flowchart LR
     R[Raking weights]
     M[SQL marts<br/>Wilson CIs, HHI, churn flows]
     A[Python analytics<br/>trends, premiums, ML, clusters, graph]
-    Q{Quality gate<br/>28 checks}
+    Q{Quality gate<br/>29 checks}
   end
   subgraph Outputs
     API[FastAPI<br/>read-only, cached]
@@ -262,7 +269,7 @@ For development, run `make api` and `make web-dev` (hot reload on :5173). The ot
 | `weights` | Rakes every wave to one reference mix and reports design effects | `core.respondent_weight`, `dq.weight_*` |
 | `marts` | Runs the versioned SQL marts: weighted shares with Wilson intervals, concentration, churn flows, pay benchmarks | `mart.*` |
 | `analytics` | Trends, quadrant, radar, forecasts, skill premiums, salary model, personas, network, GenAI drivers | `mart.*`, `ml.*`, `data/models/` |
-| `quality` | Runs the 28 checks; any failing blocker stops the run | `dq.*` |
+| `quality` | Runs the 29 checks, including the reconciliation with Stack Overflow's published results; any failing blocker stops the run | `dq.*` |
 | `insights` | Generates the headline findings from the marts | `mart.key_findings` |
 | `compact` | Rewrites the warehouse into a smaller file after verifying every table | `data/warehouse/` |
 | `reports` | Builds the Excel pack, research note, Power BI export and data dictionary | `reports/`, `docs/data_dictionary.md` |
@@ -283,12 +290,20 @@ For development, run `make api` and `make web-dev` (hot reload on :5173). The ot
 
 ## Testing and quality
 
-- **Source reconciliation.** The row count for every wave matches the publisher's published total, and every raw file
-  has a checksum.
-- **Quality gate.** 28 automated checks across the DAMA dimensions; a failing blocking check stops the build.
-- **Tests.** 103 pytest tests: 92 unit tests and 11 integration tests that need the built warehouse. They cover the
+- **Source reconciliation.** Every wave's row count matches the publisher's released data file, and every raw file has a
+  checksum. (The report headlines differ slightly for 2018, 2020 and 2025, where the report counted a different set of
+  responses from the one released.)
+- **Published results.** 120 figures from Stack Overflow's results pages (technology usage, "admired", AI, remote work,
+  response totals) are recomputed unweighted with the publisher's definitions on every build. 92 agree within 0.46
+  percentage points, and every published count of users is reproduced exactly. For database and cloud shares in 2019–2025
+  the publisher divides by more respondents than the public file shows as answering, so only their counts are compared.
+- **Independent audit.** Every headline number was recomputed from the base tables with separately written SQL, and the
+  skill premiums and the Rust trend were re-fitted with a different implementation; all match.
+- **Quality gate.** 29 automated checks across the DAMA dimensions; a failing blocking check stops the build.
+- **Tests.** 108 pytest tests: 93 unit tests and 15 integration tests that need the built warehouse. They cover the
   value parsers, taxonomy, statistics (checked against statsmodels), raking, conformal coverage, the SQL sandbox, the
-  API contracts, warehouse invariants and the serving runtime's equivalence with LightGBM.
+  API contracts, warehouse invariants, the reconciliation with published results and the serving runtime's equivalence
+  with LightGBM.
 - **CI.** GitHub Actions runs ruff, the unit tests, and the TypeScript type-check and production build on every push.
 - **Determinism.** Seeded, ordered and deterministic LightGBM, so two consecutive runs produce identical outputs
   (verified by table fingerprints).
@@ -311,7 +326,7 @@ src/stackscope/
   api/                  FastAPI app (routers per domain, sandboxed SQL lab)
   cli.py                pipeline orchestrator
 web/src/                React + TypeScript dashboard (pages, chart builders, design tokens)
-tests/                  103 tests
+tests/                  108 tests
 notebooks/  docs/  reports/
 vercel.json             CDN + Python function, rewrites, region, git deploys off
 .vercelignore           upload allowlist

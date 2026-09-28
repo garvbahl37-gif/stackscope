@@ -10,6 +10,8 @@ import logging
 
 import pandas as pd
 
+from .forecast import ORIGINS
+
 log = logging.getLogger(__name__)
 
 
@@ -23,11 +25,13 @@ def _one(con, sql: str):
 def _ai_paradox(con):
     u23, d23, t23 = _one(con, "SELECT using_w, distrust_w, trust_net FROM mart.ai_year WHERE survey_year = 2023")
     u25, d25, t25 = _one(con, "SELECT using_w, distrust_w, trust_net FROM mart.ai_year WHERE survey_year = 2025")
+    r23, r25 = (_one(con, f"""SELECT avg((ai_use = 'Using')::INT) FROM core.fact_respondent
+                              WHERE survey_year = {y} AND ai_use IS NOT NULL""")[0] for y in (2023, 2025))
     return dict(theme="GenAI", route="/ai", value=u25, value_label="use AI tools (2025)",
                 headline=f"GenAI adoption reached {u25:.0%} while trust turned negative",
-                detail=(f"Developers using AI tools rose from {u23:.0%} (2023) to {u25:.0%} (2025), yet the share who "
-                        f"distrust AI output grew from {d23:.0%} to {d25:.0%}; net trust fell from {t23:+.2f} to "
-                        f"{t25:+.2f} on a -2..+2 scale."))
+                detail=(f"Developers using AI tools rose from {u23:.0%} (2023) to {u25:.0%} (2025) after weighting to a constant "
+                        f"respondent mix ({r23:.0%} and {r25:.0%} unweighted), yet the share who distrust AI output grew from "
+                        f"{d23:.0%} to {d25:.0%}; net trust fell from {t23:+.2f} to {t25:+.2f} on a -2..+2 scale."))
 
 
 def _fastest_language(con):
@@ -50,10 +54,13 @@ def _postgres(con):
     cross = rows[rows.pg > rows.my]
     first = int(cross.survey_year.iloc[0])
     last = rows.iloc[-1]
+    top_dest = con.execute("""SELECT to_tech FROM mart.tech_switching WHERE survey_year = 2025 AND from_tech = 'MySQL'
+                              AND destination_rank = 1""").fetchone()
+    dest = ", and it is the top churn destination for MySQL users" if top_dest and top_dest[0] == "PostgreSQL" else ""
     return dict(theme="Market share", route="/landscape", value=last.pg - last.my, value_label="PostgreSQL lead over MySQL (2025)",
                 headline=f"PostgreSQL overtook MySQL in {first} and keeps widening the gap",
                 detail=(f"In 2017 MySQL led {rows.my.iloc[0]:.0%} to {rows.pg.iloc[0]:.0%}; by 2025 PostgreSQL is used by "
-                        f"{last.pg:.0%} of developers vs {last.my:.0%} for MySQL, and it is the top churn destination for MySQL users."))
+                        f"{last.pg:.0%} of developers vs {last.my:.0%} for MySQL{dest}."))
 
 
 def _premium(con):
@@ -62,11 +69,15 @@ def _premium(con):
         WHERE scope = 'Global' AND significant AND prevalence >= 0.05 ORDER BY premium DESC LIMIT 1""")
     itech, iprem = _one(con, """SELECT tech, premium FROM mart.skill_premium
                                 WHERE scope = 'India' AND significant AND prevalence >= 0.05 ORDER BY premium DESC LIMIT 1""")
+    niche = con.execute("""SELECT tech, premium FROM mart.skill_premium
+                           WHERE scope = 'Global' AND significant AND prevalence < 0.05 AND premium > ?
+                           ORDER BY premium DESC LIMIT 1""", [prem]).fetchone()
+    niche_text = f" Niche skills can carry more: {niche[0]} users earn {niche[1]:+.1%}." if niche else ""
     return dict(theme="Talent", route="/pay", value=prem, value_label=f"{tech} pay premium",
-                headline=f"{tech} carries the largest broad-based pay premium (+{prem:.1%})",
-                detail=(f"Controlling for country, experience, role, company size, education, industry and year, {tech} "
-                        f"users earn {prem:+.1%} (95% CI {lo:+.1%} to {hi:+.1%}) vs a raw gap of {raw:+.0%}. "
-                        f"In India the strongest significant premium is {itech} ({iprem:+.0%})."))
+                headline=f"{tech} carries the largest pay premium among widely used skills (+{prem:.1%})",
+                detail=(f"Among skills used by at least 5% of developers, and controlling for country, experience, role, company "
+                        f"size, education, industry and year, {tech} users earn {prem:+.1%} (95% CI {lo:+.1%} to {hi:+.1%}) vs a "
+                        f"raw gap of {raw:+.0%}.{niche_text} In India the largest such premium is {itech} ({iprem:+.0%})."))
 
 
 def _remote(con):
@@ -82,22 +93,42 @@ def _remote(con):
 
 
 def _cloud(con):
-    h0, a0 = _one(con, "SELECT hhi, leader_share FROM mart.market_concentration WHERE category = 'cloud' AND survey_year = 2018")
-    h1, a1, n1 = _one(con, "SELECT hhi, leader_share, technologies FROM mart.market_concentration WHERE category = 'cloud' AND survey_year = 2025")
-    return dict(theme="Market share", route="/landscape", value=h1, value_label="cloud mindshare HHI (2025)",
-                headline="Cloud mindshare is fragmenting beyond the big three",
-                detail=(f"The Herfindahl index of cloud-platform mindshare fell from {h0:,.0f} (2018) to {h1:,.0f} (2025) across "
-                        f"{n1} platforms; AWS still leads but its share of mentions slipped from {a0:.0%} to {a1:.0%}."))
+    """Compared on the platforms listed in both 2018 and 2025, so options added to the survey do not move it."""
+    listed = con.execute("""
+        SELECT survey_year, tech, share_used_w / sum(share_used_w) OVER (PARTITION BY survey_year) AS share
+        FROM mart.tech_year
+        WHERE category = 'cloud' AND survey_year IN (2018, 2025) AND tech_id IN (
+            SELECT tech_id FROM mart.tech_year WHERE category = 'cloud' AND survey_year = 2018
+            INTERSECT SELECT tech_id FROM mart.tech_year WHERE category = 'cloud' AND survey_year = 2025)""").df()
+    wide = listed.pivot(index="tech", columns="survey_year", values="share")
+    big3 = ["AWS", "Microsoft Azure", "Google Cloud"]
+    b0, b1 = wide.loc[big3, 2018].sum(), wide.loc[big3, 2025].sum()
+    change = (wide[2025] - wide[2018]).drop(big3)
+    loser = change.idxmin()
+    new = con.execute("""SELECT tech, mindshare FROM mart.tech_mindshare WHERE category = 'cloud' AND survey_year = 2025
+                         AND tech_id NOT IN (SELECT tech_id FROM mart.tech_year WHERE category = 'cloud' AND survey_year = 2018)
+                         ORDER BY mindshare DESC""").df()
+    verb = "consolidated" if b1 > b0 else "lost ground in"
+    return dict(theme="Market share", route="/landscape", value=b1, value_label="big three's share, established cloud platforms (2025)",
+                headline=f"AWS, Azure and Google Cloud {verb} the established cloud market",
+                detail=(f"Among the {len(wide)} platforms listed in both 2018 and 2025, the big three went from {b0:.0%} to {b1:.0%} "
+                        f"of mentions as {loser} fell from {wide.loc[loser, 2018]:.0%} "
+                        f"to {wide.loc[loser, 2025]:.0%}. Platforms first listed after 2018, led by {new.tech.iloc[0]} "
+                        f"({new.mindshare.iloc[0]:.0%}) and {new.tech.iloc[1]} ({new.mindshare.iloc[1]:.0%}), now draw "
+                        f"{new.mindshare.sum():.0%} of all cloud mentions."))
 
 
 def _churn(con):
     src, dst, share, churn = _one(con, """
         SELECT from_tech, to_tech, share_of_churners, from_churn_rate FROM mart.tech_switching
         WHERE survey_year = 2025 AND from_tech = 'Java' AND destination_rank = 1""")
+    other = dict(con.execute("""SELECT from_tech, to_tech FROM mart.tech_switching
+                                WHERE survey_year = 2025 AND from_tech IN ('MySQL', 'jQuery') AND destination_rank = 1""").fetchall())
+    also = " and ".join(f"{a} to {b}" for a, b in sorted(other.items()))
     return dict(theme="Retention", route="/retention", value=churn, value_label="Java churn intent",
                 headline=f"{churn:.0%} of Java users don't want to keep using it next year — {dst} is their top pick",
                 detail=(f"Of Java developers who did not pick Java for next year, {share:.0%} want to adopt {dst} (a language they "
-                        "do not use yet); churn-flow analysis shows the same pattern for MySQL -> PostgreSQL and jQuery -> React/Vue."))
+                        "do not use yet)." + (f" The largest flows elsewhere run {also}." if also else "")))
 
 
 def _real_pay(con):
@@ -115,9 +146,10 @@ def _personas(con):
     big, big_share = _one(con, "SELECT name, share_w FROM mart.segment_profile ORDER BY share_w DESC LIMIT 1")
     rich, pay = _one(con, "SELECT name, median_pay_real FROM mart.segment_profile WHERE median_pay_real IS NOT NULL ORDER BY median_pay_real DESC LIMIT 1")
     low, low_pay = _one(con, "SELECT name, median_pay_real FROM mart.segment_profile WHERE median_pay_real IS NOT NULL ORDER BY median_pay_real LIMIT 1")
+    n = _one(con, "SELECT count(*) FROM mart.segment_profile")[0]
     return dict(theme="Segments", route="/personas", value=pay, value_label=f"median pay, {rich}",
                 headline=f"{rich} is the best-paid developer persona",
-                detail=(f"Stack-based clustering finds 8 personas; {big} is the largest ({big_share:.0%}), while {rich} earn a median "
+                detail=(f"Stack-based clustering finds {n} personas; {big} is the largest ({big_share:.0%}), while {rich} earn a median "
                         f"${pay:,.0f} vs ${low_pay:,.0f} for {low}."))
 
 
@@ -139,7 +171,7 @@ def _forecast(con):
     n_models = _one(con, "SELECT count(DISTINCT model) FROM mart.forecast_backtest")[0]
     return dict(theme="Methodology", route="/trends", value=mae, value_label="1-year forecast MAE (pp)",
                 headline="Adoption shares move like a random walk year to year",
-                detail=(f"Across {n_models} backtested models (rolling origins 2020-2024) none beat the '{model}' forecast "
+                detail=(f"Across {n_models} backtested models (rolling origins {ORIGINS[0]}-{ORIGINS[-1]}) none beat the '{model}' forecast "
                         f"(mean absolute error {mae:.1f} pp one year ahead); forecasts therefore show calibrated uncertainty bands "
                         "rather than extrapolated trends."))
 

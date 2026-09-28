@@ -203,7 +203,7 @@ Convenience view: usage facts with technology names. View.
 
 ### `dq.check_results`
 
-Automated data-quality checks by DAMA dimension with status and evidence. 28 rows.
+Automated data-quality checks by DAMA dimension with status and evidence. 29 rows.
 
 | Column | Type |
 |---|---|
@@ -240,6 +240,29 @@ Every raw technology label per wave and question with its mapping outcome. 2,842
 | `mentions` | bigint |
 | `tech` | varchar |
 | `status` | varchar |
+
+### `dq.published_reconciliation`
+
+120 rows.
+
+| Column | Type |
+|---|---|
+| `survey_year` | bigint |
+| `metric` | varchar |
+| `item` | varchar |
+| `group` | varchar |
+| `published` | double |
+| `ours` | double |
+| `diff` | double |
+| `unit` | varchar |
+| `base_published` | double |
+| `base_ours` | double |
+| `count_published` | double |
+| `count_ours` | double |
+| `same_base` | boolean |
+| `status` | varchar |
+| `note` | varchar |
+| `url` | varchar |
 
 ### `dq.schema_notes`
 
@@ -448,6 +471,7 @@ HHI, CR3/CR5, leader and structure per category-year. 67 rows.
 | `category_label` | varchar |
 | `technologies` | bigint |
 | `hhi` | double |
+| `hhi_like_for_like` | double |
 | `effective_competitors` | double |
 | `cr3` | double |
 | `cr5` | double |
@@ -799,6 +823,7 @@ Technology KPI cube: raw and weighted adoption with Wilson intervals, desire, re
 | `share_wanted` | double |
 | `share_wanted_w` | double |
 | `users_asked_want` | bigint |
+| `users_asked_want_w` | double |
 | `n_retained` | bigint |
 | `retention` | double |
 | `retention_w` | double |
