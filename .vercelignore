@@ -1,0 +1,28 @@
+# Upload only what the deployment needs; everything else (secrets, raw survey files, notebooks,
+# reports, local tooling) stays on this machine. Same syntax as .gitignore: ignore all, then re-include.
+/*
+!/api
+!/src
+!/config
+!/web
+!/data
+!/vercel.json
+
+# data: the built warehouse, the trained models and the source manifest only
+/data/*
+!/data/warehouse
+!/data/models
+!/data/raw
+/data/raw/*
+!/data/raw/manifest.json
+
+# built on Vercel
+/web/node_modules
+/web/dist
+
+**/__pycache__
+**/.DS_Store
+
+# never upload secrets, whatever is re-included above
+**/.env
+**/.env.*

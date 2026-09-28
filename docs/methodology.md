@@ -34,6 +34,9 @@ two consecutive runs produce bit-identical outputs.
   technology, role and AI-task facts; dimensions cover countries, technologies, years and CPI.
 - **Marts** (`warehouse/sql/marts`): versioned SQL (window functions, GROUPING SETS, PIVOT/UNPIVOT, macros).
 - **Analytics** (`analytics/`): Python statistics and machine learning writing back into the warehouse.
+- **Compact** (`warehouse/build.py`): the finished warehouse is copied into a fresh file in DuckDB's newest storage
+  format. The copy drops free blocks, is about 10% smaller (93.6 MB), and replaces the original only after every table's
+  row count and content hash match.
 
 ## 4. Harmonisation
 
@@ -165,6 +168,9 @@ controls shrink the typical gap 4.4×. These are associations, not causal effect
   is 20.7%, against 30.0% for the baseline.
 - **Explanations.** Exact TreeSHAP contributions from `pred_contrib`, aggregated into feature groups.
 - **Determinism.** LightGBM runs in deterministic mode on a sorted training frame, so metrics are reproducible exactly.
+- **Serving** (`analytics/salary_runtime.py`). The API scores the saved models through LightGBM's C API (via ctypes)
+  instead of the Python package, so it needs no NumPy, SciPy or pandas. Features are encoded as in training. Tests
+  confirm the predictions and TreeSHAP contributions are identical to `lightgbm.Booster.predict`.
 
 ## 13. Developer personas (`analytics/segments.py`)
 

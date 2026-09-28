@@ -1,21 +1,28 @@
 """Read-only warehouse access for the API.
 
 One process-wide DuckDB connection (read-only, external file/network access disabled); each request
-uses its own cursor, which DuckDB makes safe across threads. Values are sanitised for JSON (NaN/inf
+uses its own cursor, which DuckDB makes safe across threads. Spill files go to the system temp dir, so the
+warehouse can sit on a read-only filesystem (the serverless deployment). Values are sanitised for JSON (NaN/inf
 -> null). The warehouse is immutable between pipeline runs, so query results are memoised.
 """
 
 from __future__ import annotations
 
 import math
+import tempfile
 import threading
 from datetime import date, datetime
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import duckdb
 
 from .. import settings
+
+# Shared by every connection in the process: DuckDB allows one configuration per database file.
+CONNECT_CONFIG = {"enable_external_access": False,
+                  "temp_directory": str(Path(tempfile.gettempdir()) / "stackscope-duckdb")}
 
 _lock = threading.Lock()
 _con: duckdb.DuckDBPyConnection | None = None
@@ -28,8 +35,7 @@ def connection() -> duckdb.DuckDBPyConnection:
             if _con is None:
                 if not settings.WAREHOUSE_PATH.exists():
                     raise RuntimeError(f"Warehouse not found at {settings.WAREHOUSE_PATH}. Run `stackscope run` first.")
-                _con = duckdb.connect(str(settings.WAREHOUSE_PATH), read_only=True,
-                                      config={"enable_external_access": False})
+                _con = duckdb.connect(str(settings.WAREHOUSE_PATH), read_only=True, config=CONNECT_CONFIG)
                 _con.execute("SET enable_progress_bar = false")
     return _con
 

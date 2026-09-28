@@ -5,7 +5,8 @@
     stackscope run --only analytics
     stackscope stages           # list stages
 
-Stages: ingest -> external -> silver -> core -> weights -> marts -> analytics -> quality -> insights -> reports
+Stages: ingest -> external -> silver -> core -> weights -> marts -> analytics -> quality -> insights -> compact
+        -> reports
 The quality stage is a gate: any failing "blocker" check aborts the run before insights/reports.
 """
 
@@ -95,6 +96,11 @@ def _insights(con):
     print(f"  [insights] {run(con)}")
 
 
+def _compact():
+    from .warehouse.build import compact
+    print(f"  [compact] {compact()}")
+
+
 def _reports():
     from .reporting import build_all
     for line in build_all():
@@ -111,6 +117,7 @@ STAGES: dict[str, Callable[[], None]] = {
     "analytics": _with_connection(_analytics),
     "quality": _with_connection(_quality),
     "insights": _with_connection(_insights),
+    "compact": _compact,
     "reports": _reports,
 }
 

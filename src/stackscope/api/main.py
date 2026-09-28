@@ -1,6 +1,6 @@
 """StackScope API — FastAPI application.
 
-    uvicorn stackscope.api.main:app --reload            (dev, http://localhost:8000/docs)
+    uvicorn stackscope.api.main:app --reload            (dev; interactive docs at http://localhost:8000/api/docs)
 
 When the React build exists at web/dist it is served from the same origin, so one process runs the
 whole product in production.
@@ -25,6 +25,8 @@ app = FastAPI(
     version="1.0.0",
     description="Developer technology market intelligence — 9 survey waves, 664k respondents. "
                 "Adoption, positioning, retention, compensation, personas, GenAI and data quality.",
+    # under /api so the docs work behind the same rewrite as the API in the Vercel deployment
+    docs_url="/api/docs", redoc_url=None, openapi_url="/api/openapi.json",
 )
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

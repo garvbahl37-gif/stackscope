@@ -73,3 +73,36 @@ def build_marts() -> None:
         run_sql_dir(con, "marts")
     finally:
         con.close()
+
+
+def compact() -> dict:
+    """Rewrite the warehouse into a fresh file in DuckDB's newest storage format.
+
+    Stages rewrite tables in place, which leaves free blocks behind; a fresh copy with the newest compression
+    is ~10% smaller, which keeps the file under the 100 MB per-file limit of Vercel CLI uploads. The copy
+    replaces the original only after every table's row count and order-independent content hash, and the
+    number of views and macros, match.
+    """
+    src, tmp = settings.WAREHOUSE_PATH, settings.WAREHOUSE_PATH.with_suffix(".compact.duckdb")
+    tmp.unlink(missing_ok=True)
+    con = duckdb.connect()
+    try:
+        con.execute(f"ATTACH '{src}' AS src (READ_ONLY)")
+        con.execute(f"ATTACH '{tmp}' AS dst (STORAGE_VERSION 'latest')")
+        con.execute("COPY FROM DATABASE src TO dst")
+        tables = con.execute("""SELECT schema_name, table_name FROM duckdb_tables()
+                                WHERE database_name = 'src' ORDER BY ALL""").fetchall()
+        for schema, table in tables:
+            probe = "SELECT count(*), bit_xor(hash(t)) FROM {db}." + f"{schema}.{table} AS t"
+            if con.execute(probe.format(db="src")).fetchone() != con.execute(probe.format(db="dst")).fetchone():
+                raise RuntimeError(f"compaction changed {schema}.{table}")
+        objects = """SELECT (SELECT count(*) FROM duckdb_views() WHERE database_name = '{db}' AND NOT internal),
+                            (SELECT count(*) FROM duckdb_functions() WHERE database_name = '{db}' AND NOT internal
+                                                                         AND function_type LIKE '%macro')"""
+        if con.execute(objects.format(db="src")).fetchone() != con.execute(objects.format(db="dst")).fetchone():
+            raise RuntimeError("compaction lost views or macros")
+    finally:
+        con.close()
+    before, after = src.stat().st_size, tmp.stat().st_size
+    tmp.replace(src)
+    return {"tables": len(tables), "mb_before": round(before / 1e6, 1), "mb_after": round(after / 1e6, 1)}

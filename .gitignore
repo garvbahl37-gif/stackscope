@@ -1,9 +1,11 @@
-# secrets
+# secrets (.env.local is written by `vercel link`)
 .env
+.env.*
+!.env.example
 
 # data & build artefacts (reproducible with `make pipeline`)
 data/
-reports/bi/
+reports/bi/*.parquet
 web/dist/
 web/node_modules/
 

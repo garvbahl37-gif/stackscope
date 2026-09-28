@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ... import settings
-from ..db import clean
+from ..db import CONNECT_CONFIG, clean
 
 router = APIRouter(prefix="/sql", tags=["sql-lab"])
 
@@ -33,8 +33,7 @@ def _connection() -> duckdb.DuckDBPyConnection:
     if _con is None:
         with _lock:
             if _con is None:
-                con = duckdb.connect(str(settings.WAREHOUSE_PATH), read_only=True,
-                                     config={"enable_external_access": False})
+                con = duckdb.connect(str(settings.WAREHOUSE_PATH), read_only=True, config=CONNECT_CONFIG)
                 con.execute("SET memory_limit = '1GB'")
                 con.execute("SET threads = 2")
                 con.execute("SET enable_progress_bar = false")

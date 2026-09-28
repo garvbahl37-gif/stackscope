@@ -2,7 +2,8 @@
 PY      := .venv/bin/python
 APP     := stackscope.api.main:app
 
-.PHONY: help setup pipeline data api web-dev web-build serve test test-unit lint notebook docker-build docker-up clean
+.PHONY: help setup pipeline data api web-dev web-build serve test test-unit lint notebook docker-build docker-up \
+        deploy-check deploy-preview deploy clean
 
 help:            ## show this help
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-13s\033[0m %s\n", $$1, $$2}'
@@ -38,7 +39,7 @@ test-unit:       ## unit tests only (no data needed)
 	$(PY) -m pytest -m "not integration"
 
 lint:            ## ruff + TypeScript type-check
-	.venv/bin/ruff check src tests
+	.venv/bin/ruff check src tests api
 	cd web && npm run typecheck
 
 notebook:        ## re-execute the analysis notebook in place
@@ -49,6 +50,15 @@ docker-build: web-build ## build the container (needs a built warehouse in data/
 
 docker-up:       ## run the container on :8000
 	docker compose up
+
+deploy-check:    ## check the deployable artefacts: warehouse under Vercel's 100 MB per-file upload limit, models built
+	@$(PY) -c "import os, sys; w = 'data/warehouse/stackscope.duckdb'; ok = os.path.exists(w) and os.path.getsize(w) < 100_000_000 and os.path.exists('data/models/salary_meta.json'); print('deploy artefacts ok' if ok else 'run make pipeline first (warehouse missing, over 100 MB, or model not trained)'); sys.exit(not ok)"
+
+deploy-preview: deploy-check ## deploy a preview to Vercel (uploads the local warehouse and models)
+	vercel deploy
+
+deploy: deploy-check ## deploy to Vercel production
+	vercel deploy --prod
 
 clean:           ## remove build artefacts (keeps downloaded raw data)
 	rm -rf data/silver data/warehouse data/marts data/models reports/bi web/dist

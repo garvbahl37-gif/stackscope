@@ -1,0 +1,23 @@
+# Runtime manifest for the Vercel function (api/index.py). The root pyproject.toml covers the whole
+# pipeline; serving the API needs only FastAPI, DuckDB and LightGBM's compiled library.
+[project]
+name = "stackscope-api"
+version = "1.0.0"
+description = "StackScope API as a Vercel Python function"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.141",
+    "duckdb==1.5.6",     # same engine version that wrote the warehouse
+    "pyyaml>=6.0",
+    "lightgbm==4.7.0",   # same version that trained the salary models
+]
+
+[tool.uv]
+# The salary estimator calls lib_lightgbm through ctypes (stackscope/analytics/salary_runtime.py), so the
+# LightGBM Python package and its dependencies are never imported. Dropping NumPy, SciPy and narwhals
+# (~230 MB installed) keeps the function well inside Vercel's bundle-size limit.
+override-dependencies = [
+    "numpy; sys_platform == 'never'",
+    "scipy; sys_platform == 'never'",
+    "narwhals; sys_platform == 'never'",
+]
