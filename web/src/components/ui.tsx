@@ -239,12 +239,15 @@ export function StatusBadge({ status }: { status: "pass" | "warn" | "fail" }) {
   return <span className={`status status--${status}`}><Icon aria-hidden />{label}</span>;
 }
 
-export function Legend({ items, shape = "line" }: { items: { label: string; color: string }[]; shape?: "line" | "swatch" | "dot" }) {
+export function Legend({ items, shape = "line" }: { items: { label: string; color: string; dashed?: boolean }[]; shape?: "line" | "swatch" | "dot" }) {
   const cls = shape === "line" ? "legend__line" : shape === "dot" ? "legend__dot" : "legend__swatch";
   return (
     <div className="legend">
       {items.map((i) => (
-        <span className="legend__item" key={i.label}><span className={cls} style={{ background: i.color }} />{i.label}</span>
+        <span className="legend__item" key={i.label}>
+          <span className={cls} style={{ background: i.dashed ? `repeating-linear-gradient(90deg, ${i.color} 0 5px, transparent 5px 8px)` : i.color }} />
+          {i.label}
+        </span>
       ))}
     </div>
   );

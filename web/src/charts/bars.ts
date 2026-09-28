@@ -10,7 +10,7 @@ export function rangeDotOption(rows: { label: string; lo: number; mid: number; h
   const labels = rows.map((r) => r.label);
   return {
     ...base(t),
-    grid: { left: 8, right: 40, top: 22, bottom: 28, containLabel: true },
+    grid: { left: 8, right: 40, top: opts.reference ? 34 : 22, bottom: 28, containLabel: true },
     tooltip: tooltip(t, {
       trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: t.dark ? "rgba(255,255,255,0.04)" : "rgba(15,42,51,0.04)" } },
       formatter: (params: { dataIndex: number }[]) => {
@@ -28,14 +28,18 @@ export function rangeDotOption(rows: { label: string; lo: number; mid: number; h
         itemStyle: { color: t.dark ? "rgba(57,135,229,0.35)" : "rgba(42,120,214,0.22)", borderRadius: 6 },
         markLine: opts.reference ? {
           silent: true, symbol: "none", lineStyle: { color: t.ink3, width: 1, type: "solid" },
-          label: { formatter: opts.reference.label, color: t.ink3, fontSize: 10.5, position: "end", rotate: 0, distance: 4 },
+          // the y-axis is inverted, so "start" is the top of the line: clear of the x-axis labels
+          label: { formatter: `${opts.reference.label} ${fmt(opts.reference.value)}`, color: t.ink2, fontSize: 11, position: "start",
+                   rotate: 0, distance: 6, backgroundColor: t.surface, padding: [1, 4], borderRadius: 3 },
           data: [{ xAxis: opts.reference.value }],
         } : undefined,
       },
       {
         id: "median", type: "scatter", data: rows.map((r) => r.mid), symbolSize: 10,
         itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 2 },
-        label: { show: true, position: "right", distance: 10, formatter: (p: { value: number }) => fmt(p.value), color: t.ink2, fontSize: 11 },
+        // surface-coloured label background keeps values legible where the reference line crosses them
+        label: { show: true, position: "right", distance: 10, formatter: (p: { value: number }) => fmt(p.value), color: t.ink2, fontSize: 11,
+                 backgroundColor: t.surface, padding: [1, 3], borderRadius: 3 },
         z: 3,
       },
     ],
@@ -84,6 +88,12 @@ export function forestOption(rows: { label: string; est: number; lo: number; hi:
   const min = Math.min(...values);
   const max = Math.max(...values);
   const pad = (max - min) * 0.06 || 0.05;
+  // round the linear axis out to whole steps so it never ends on an odd tick such as "+76%"
+  const raw = (max - min + 2 * pad) / 6;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((v) => v >= raw) ?? 10 * mag;
+  const lo = Math.floor(Math.min(min - pad, opts.reference) / step) * step;
+  const hi = Math.ceil(Math.max(max + pad, opts.reference) / step) * step;
   return {
     ...base(t),
     grid: { left: 8, right: 30, top: 8, bottom: 30, containLabel: true },
@@ -99,8 +109,9 @@ export function forestOption(rows: { label: string; est: number; lo: number; hi:
     }),
     xAxis: {
       type: opts.log ? "log" : "value", ...ax, axisLine: { show: false }, logBase: 2,
-      min: opts.log ? 2 ** Math.floor(Math.log2(Math.min(min, opts.reference))) : Math.min(min - pad, opts.reference),
-      max: opts.log ? 2 ** Math.ceil(Math.log2(Math.max(max, opts.reference))) : Math.max(max + pad, opts.reference),
+      min: opts.log ? 2 ** Math.floor(Math.log2(Math.min(min, opts.reference))) : lo,
+      max: opts.log ? 2 ** Math.ceil(Math.log2(Math.max(max, opts.reference))) : hi,
+      interval: opts.log ? undefined : step,
       axisLabel: { ...ax.axisLabel, formatter: (v: number) => opts.fmt(v) },
     },
     yAxis: { type: "category", data: labels, inverse: true, ...ax, splitLine: { show: false }, axisLabel: { ...ax.axisLabel, color: t.ink2, fontSize: 12 } },

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { simpleBarOption } from "../charts/bars";
-import { heatmapOption } from "../charts/misc";
+import { heatmapOption, RECON_BAND, reconciliationOption, reconLabel } from "../charts/misc";
 import { EChart } from "../components/EChart";
-import { type Column, DataTable, DownloadButton, ErrorState, Loading, PageHeader, Panel, Segmented, StatusBadge } from "../components/ui";
-import { type Check, type Quality as QualityData, useQuality } from "../lib/api";
+import { type Column, DataTable, DownloadButton, ErrorState, Legend, Loading, PageHeader, Panel, Segmented, StatusBadge } from "../components/ui";
+import { type Check, type Quality as QualityData, type ReconRow, useQuality } from "../lib/api";
 import { compactNum, fixed, int, pct } from "../lib/format";
 import { useTokens } from "../lib/theme";
 
@@ -35,11 +35,22 @@ const WEIGHT_COLUMNS: Column<Weight>[] = [
 
 const STAGES = [
   { stage: "Sources", items: ["Kaggle: 9 annual survey files", "World Bank API: PPP, FX, GDP, population", "FRED: US CPI-U"] },
-  { stage: "Bronze", items: ["Raw CSVs, 1.1 GB", "SHA-256 manifest", "Row counts reconciled to publisher totals"] },
+  { stage: "Bronze", items: ["Raw CSVs, 1.2 GB", "SHA-256 manifest", "Row counts reconciled to the released files"] },
   { stage: "Silver", items: ["Year-specific schemas harmonised", "309-technology taxonomy, 448 raw labels", "Country, role, pay and AI fields normalised"] },
   { stage: "Gold", items: ["DuckDB star schema", "Facts, bridges, conformed dimensions", "Raking weights per respondent"] },
-  { stage: "Marts & models", items: ["SQL marts with Wilson intervals", "Python analytics: trends, premiums, ML, clustering", "Quality gate: 28 automated checks"] },
+  { stage: "Marts & models", items: ["SQL marts with Wilson intervals", "Python analytics: trends, premiums, ML, clustering", "Quality gate: 29 automated checks"] },
   { stage: "Serving", items: ["FastAPI (read-only, cached)", "React dashboard", "Sandboxed SQL lab"] },
+];
+
+const TOLERANCE_PP = 0.5;   // matches quality/reconcile.py
+
+const RECON_COLUMNS: Column<ReconRow>[] = [
+  { key: "item", label: "Published figure", render: (r) => (r.unit === "count" ? `Responses, ${r.survey_year}` : reconLabel(r)) },
+  { key: "published", label: "Published", numeric: true, render: (r) => (r.unit === "count" ? int(r.published) : `${fixed(r.published, 2)}%`) },
+  { key: "ours", label: "Recomputed", numeric: true, render: (r) => (r.unit === "count" ? int(r.ours) : `${fixed(r.ours, 2)}%`) },
+  { key: "diff", label: "Difference", numeric: true, render: (r) => (r.unit === "count" ? int(r.diff) : `${r.diff >= 0 ? "+" : ""}${fixed(r.diff, 2)} pp`) },
+  { key: "status", label: "Result" },
+  { key: "note", label: "Note", wrap: true, render: (r) => r.note ?? (r.same_base || r.unit === "count" ? "" : "published base is larger than the public file shows") },
 ];
 
 export default function Quality() {
@@ -55,6 +66,17 @@ export default function Quality() {
     return heatmapOption(years, fields, data.completeness.map((c) => ({
       x: String(c.survey_year), y: label(c.field), v: c.asked ? c.completeness : null, label: c.asked ? undefined : "question not asked this year",
     })), t, { fmt: (v) => pct(v, 0), min: 0, max: 1, cellLabels: true, valueName: "Answered" });
+  }, [data, t]);
+  const recon = useMemo(() => {
+    if (!data?.reconciliation?.length) return null;
+    const shares = data.reconciliation.filter((r) => r.unit === "pct");
+    const same = shares.filter((r) => r.same_base);
+    return {
+      option: reconciliationOption(data.reconciliation, TOLERANCE_PP, t),
+      same: same.length, maxDiff: Math.max(...same.map((r) => Math.abs(r.diff))),
+      counted: shares.filter((r) => !r.same_base && r.status === "count matches").length,
+      unexplained: data.reconciliation.filter((r) => r.status === "differs").length,
+    };
   }, [data, t]);
   const deff = useMemo(() => data ? simpleBarOption(data.weights.map((w) => ({ label: String(w.survey_year), value: w.design_effect })), t, (v) => fixed(v, 2), { horizontal: false }) : null, [data, t]);
 
@@ -101,6 +123,17 @@ export default function Quality() {
                      <DownloadButton columns={CHECK_COLUMNS} rows={data.checks} filename="quality_checks.csv" /></>}>
               <DataTable columns={CHECK_COLUMNS} rows={checks} rowKey={(r) => r.check_id} maxHeight={520} />
             </Panel>
+
+            {recon && (
+              <Panel className="span-12" title="Reconciliation with Stack Overflow's published results"
+                     caption={`${recon.same} published figures, recomputed unweighted with Stack Overflow's own definitions, agree within ${fixed(recon.maxDiff, 2)} percentage points. For ${recon.counted} database and cloud shares the published figure divides by more respondents than the public data file shows as answering, so the share differs, but the number of users matches the published count.${recon.unexplained ? ` ${recon.unexplained} figure(s) are unexplained.` : ""} The rest of the dashboard is weighted and differs from these by design.`}
+                     table={{ columns: RECON_COLUMNS, rows: data.reconciliation, filename: "published_reconciliation.csv" }}
+                     foot="Published figures collected from survey.stackoverflow.co on 29 September 2026; every source link is in config/published_benchmarks.yml and in the table download.">
+                <Legend items={[{ label: "Same definition as published", color: t.series[0] }, { label: "Larger published base, user count matches", color: t.series[1] }]} shape="dot" />
+                <Legend items={[{ label: `Shaded: within ±${TOLERANCE_PP} percentage points`, color: RECON_BAND(t) }]} shape="swatch" />
+                <EChart option={recon.option} height={400} label="Difference between recomputed and published figures" />
+              </Panel>
+            )}
 
             <Panel className="span-7" title="What each wave asked"
                    caption="Share of respondents with a usable answer, by field and wave. Blank cells were not asked that year; the harmonised schema keeps them explicit rather than silently empty."

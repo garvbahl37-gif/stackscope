@@ -64,7 +64,7 @@ export type Trajectory = {
 
 export type Concentration = {
   category: string;
-  hhi: { survey_year: number; hhi: number; effective_competitors: number; cr3: number; cr5: number; leader: string; leader_share: number; structure: string; technologies: number }[];
+  hhi: { survey_year: number; hhi: number; hhi_like_for_like: number; effective_competitors: number; cr3: number; cr5: number; leader: string; leader_share: number; structure: string; technologies: number }[];
   shares: { survey_year: number; tech: string; mindshare: number }[];
 };
 
@@ -154,6 +154,12 @@ export type AiPulse = {
 };
 
 export type Check = { check_id: string; dimension: string; description: string; metric: number; threshold: string; status: "pass" | "warn" | "fail"; blocker: boolean; detail: string };
+/** One published Stack Overflow figure and its unweighted recomputation (dq.published_reconciliation). */
+export type ReconRow = {
+  survey_year: number; metric: string; item: string; group: string | null; published: number; ours: number; diff: number;
+  unit: string; same_base: boolean; status: string; note: string | null; url: string;
+};
+
 export type Quality = {
   checks: Check[];
   completeness: { survey_year: number; field: string; completeness: number; asked: boolean }[];
@@ -164,6 +170,7 @@ export type Quality = {
   coverage: { survey_year: number; status: string; labels: number; mentions: number }[];
   aliases: { tech: string; raw_labels: number; labels: string[]; mentions: number }[];
   tables: { schema_name: string; table_name: string; rows: number; column_count: number }[];
+  reconciliation: ReconRow[];
 };
 
 export type SqlResult = { columns: { name: string; type: string }[]; rows: unknown[][]; row_count: number; truncated: boolean; elapsed_ms: number };

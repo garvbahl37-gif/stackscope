@@ -84,7 +84,7 @@ export default function Ai() {
       { name: "Favourable", color: t.series[1], points: data.years.map((y) => ({ x: y.survey_year, y: y.favorable_w })) },
       { name: "Trust accuracy", color: t.series[2], points: data.years.map((y) => ({ x: y.survey_year, y: y.trust_w })) },
       { name: "Distrust accuracy", color: t.series[3], points: data.years.map((y) => ({ x: y.survey_year, y: y.distrust_w })) },
-    ], t, { yFormat: (v) => pct(v, 0), yMin: 0, yMax: 1, yInterval: 0.25, endLabels: true });
+    ], t, { yFormat: (v) => pct(v, 0), yMin: 0, yMax: 1, yInterval: 0.25, endLabels: true, height: 400 });
 
     const trust = likertSegments(data, "ai_trust", TRUST, divergingColors(t));
     const sentiment = likertSegments(data, "ai_sentiment", SENTIMENT, divergingColors(t));
@@ -122,7 +122,7 @@ export default function Ai() {
     const toolsChart = lineOption(tools.map((tech, i) => ({
       name: tech, color: t.series[i],
       points: data.tools.filter((r) => r.tech === tech).map((r) => ({ x: r.survey_year, y: r.share_used_w })),
-    })), t, { yFormat: (v) => pct(v, 0), yMin: 0, yMax: 1, yInterval: 0.25, endLabels: true });
+    })), t, { yFormat: (v) => pct(v, 0), yMin: 0, yMax: 1, yInterval: 0.25, endLabels: true, height: 380 });
 
     return { paradox, trustChart, sentimentChart, tasksChart, toolsChart, trust, years };
   }, [data, t]);
@@ -175,7 +175,7 @@ export default function Ai() {
           <div className="grid" style={{ marginTop: 18 }}>
             <Panel className="span-7" hero title="The adoption–trust gap"
                    caption="Composition-weighted shares of respondents. Usage keeps climbing; favourability and trust in accuracy move the other way.">
-              <EChart option={charts.paradox} height={360} label="AI adoption versus trust" />
+              <EChart option={charts.paradox} height={400} label="AI adoption versus trust" />
             </Panel>
             <Panel className="span-5" title="How much developers trust AI output"
                    caption="Share of respondents by trust in the accuracy of AI tools.">
@@ -186,28 +186,32 @@ export default function Ai() {
               <EChart option={charts.sentimentChart} height={170} label="Sentiment distribution by year" />
             </Panel>
 
-            <Panel className="span-6" title="Who adopts, who trusts, 2025"
-                   caption="Share using AI tools against share trusting their accuracy, by segment. The horizontal gap is the trust deficit.">
-              <div className="controls" style={{ marginBottom: 6 }}>
-                <Segmented label="Segment by" options={DIMENSIONS} value={dimension} onChange={setDimension} />
-              </div>
-              <Legend items={[{ label: "Use AI tools", color: t.series[0] }, { label: "Trust the output", color: t.series[1] }]} shape="dot" />
-              {dumbbell && <EChart option={dumbbell} height={dimension === "role" || dimension === "region" ? 470 : 300} label="Adoption versus trust by segment" />}
-            </Panel>
+            {/* the short segment chart and the task chart stack beside the tall odds-ratio chart */}
+            <div className="span-6 stack">
+              <Panel title="Who adopts, who trusts, 2025"
+                     caption="Share using AI tools against share trusting their accuracy, by segment. The horizontal gap is the trust deficit.">
+                <div className="controls" style={{ marginBottom: 6 }}>
+                  <Segmented label="Segment by" options={DIMENSIONS} value={dimension} onChange={setDimension} />
+                </div>
+                <Legend items={[{ label: "Use AI tools", color: t.series[0] }, { label: "Trust the output", color: t.series[1] }]} shape="dot" />
+                {dumbbell && <EChart option={dumbbell} height={dimension === "role" || dimension === "region" ? 470 : 300} label="Adoption versus trust by segment" />}
+              </Panel>
+
+              <Panel title="Where AI is used in the workflow"
+                     caption="Share of respondents currently using AI for each task (2025 counts mostly- or partly-AI use).">
+                <Legend items={charts.years.map((y, i) => ({ label: String(y), color: [t.seq[2], t.seq[4], t.seq[6]][i] }))} shape="swatch" />
+                <EChart option={charts.tasksChart} height={440} label="AI use by task" />
+              </Panel>
+            </div>
             <Panel className="span-6" title="What predicts it"
                    caption={drivers ? `Odds ratios from a survey-weighted logistic regression (${drivers.nModel?.toLocaleString()} respondents, 2025), each factor holding the others constant. Right of 1 means more likely; grey rows are not significant after FDR correction.` : undefined}
                    tools={<Segmented label="Outcome" options={[{ value: "trust", label: "Trusts output" }, { value: "adoption", label: "Uses AI" }]} value={model} onChange={setModel} />}>
-              {drivers && <EChart option={drivers.option} height={Math.max(360, drivers.n * 21 + 60)} label="Odds ratios" />}
+              {drivers && <EChart option={drivers.option} height={Math.max(360, drivers.n * 23 + 60)} label="Odds ratios" />}
             </Panel>
 
-            <Panel className="span-6" title="Where AI is used in the workflow"
-                   caption="Share of respondents currently using AI for each task (2025 counts mostly- or partly-AI use).">
-              <Legend items={charts.years.map((y, i) => ({ label: String(y), color: [t.seq[2], t.seq[4], t.seq[6]][i] }))} shape="swatch" />
-              <EChart option={charts.tasksChart} height={440} label="AI use by task" />
-            </Panel>
-            <Panel className="span-6" title="The assistant and model landscape"
+            <Panel className="span-12" title="The assistant and model landscape"
                    caption="Share of AI-question respondents using each tool. 2023–2024 asked about tools, 2025 about model families, so Claude's jump partly reflects the new question.">
-              <EChart option={charts.toolsChart} height={440} label="AI tools and models over time" />
+              <EChart option={charts.toolsChart} height={380} label="AI tools and models over time" />
             </Panel>
           </div>
         </>

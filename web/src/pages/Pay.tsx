@@ -56,7 +56,7 @@ export default function Pay() {
     else rows = [...rows].sort((a, b) => val(b).mid - val(a).mid);
     const overall = bench.data.overall;
     return rangeDotOption(rows.map((r) => ({ label: r.label ?? r.segment, n: r.n, ...val(r) })).filter((r) => Number.isFinite(r.mid)), t, fmtMoney,
-      overall ? { reference: { value: basis === "usd" ? overall.median_usd : overall.median_ppp, label: "all developers" } } : {});
+      overall ? { reference: { value: basis === "usd" ? overall.median_usd : overall.median_ppp, label: "All developers" } } : {});
   }, [bench.data, basis, cut, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mapOption = useMemo(() => {
@@ -80,9 +80,9 @@ export default function Pay() {
   }, [premiumRows, t]);
 
   const payTrend = useMemo(() => workforce.data ? lineOption([
-    { name: "Fixed country mix", color: t.series[0], points: workforce.data.real_pay.map((r) => ({ x: r.survey_year, y: r.fixed_mix_median_real })) },
+    { name: "Fixed mix", color: t.series[0], points: workforce.data.real_pay.map((r) => ({ x: r.survey_year, y: r.fixed_mix_median_real })) },
     { name: "Raw median", color: t.series[1], points: workforce.data.real_pay.map((r) => ({ x: r.survey_year, y: r.raw_median_real })) },
-  ], t, { yFormat: (v) => money(v), yMin: 50000, endLabels: true }) : null, [workforce.data, t]);
+  ], t, { yFormat: (v) => money(v), yMin: 50000, endLabels: true, height: 300 }) : null, [workforce.data, t]);
 
   const remoteMix = useMemo(() => {
     if (!workforce.data) return null;
@@ -108,7 +108,7 @@ export default function Pay() {
         <Segmented label="Currency basis" options={[{ value: "usd", label: "US dollars" }, { value: "ppp", label: "Purchasing power (PPP)" }]} value={basis} onChange={setBasis} />
       </div>
       <div className="grid">
-        <Panel className="span-7" stale={bench.isPlaceholderData}
+        <Panel className="span-12" stale={bench.isPlaceholderData}
                title={`Pay by ${CUTS.find((c) => c.value === cut)!.label.toLowerCase()}, ${year}`}
                caption="Full-time professional developers. The bar spans the middle 50% of salaries; the dot is the median."
                tools={<Select id="cut" label="" options={CUTS} value={cut} onChange={setCut} />}
@@ -122,7 +122,7 @@ export default function Pay() {
                ], rows: bench.data.rows, filename: `pay_${cut}_${year}.csv` } : undefined}>
           {bench.isError ? <ErrorState error={bench.error} /> : rangeOption ? <EChart option={rangeOption} height={Math.max(320, (bench.data?.rows.length ?? 8) * 34 + 60)} label="Pay ranges" /> : <Loading height={360} />}
         </Panel>
-        <Panel className="span-5" stale={payMap.isPlaceholderData} title={`Median pay by country, ${year}`}
+        <Panel className="span-7" stale={payMap.isPlaceholderData} title={`Median pay by country, ${year}`}
                caption={basis === "usd" ? "Countries with at least 30 validated salaries. Switch to PPP to compare living standards." : "PPP dollars: what the salary buys locally, relative to the US."}
                table={payMap.data ? { columns: [
                  { key: "country", label: "Country" }, { key: "pay_n", label: "Salaries", numeric: true },
@@ -150,6 +150,23 @@ export default function Pay() {
           )}
         </Panel>
 
+        <div className="span-5 stack">
+          <Panel title="Real pay, two ways"
+                 caption="Median pay in constant 2025 dollars. The raw median moves with who answered; holding the mix of 35 always-surveyed countries fixed shows the underlying trend."
+                 table={workforce.data ? { columns: [
+                   { key: "survey_year", label: "Year" },
+                   { key: "fixed_mix_median_real", label: "Fixed mix", numeric: true, render: (r: { fixed_mix_median_real: number }) => money(r.fixed_mix_median_real) },
+                   { key: "raw_median_real", label: "Raw", numeric: true, render: (r: { raw_median_real: number }) => money(r.raw_median_real) },
+                 ], rows: workforce.data.real_pay, filename: "real_pay.csv" } : undefined}>
+            {payTrend ? <EChart option={payTrend} height={300} label="Real pay trend" /> : <Loading height={300} />}
+          </Panel>
+          <Panel title="How developers work"
+                 caption="Professional developers by work arrangement, composition-weighted. Not asked in 2018, 2020 or 2021.">
+            <Legend items={[{ label: "In-person", color: t.seq[1] }, { label: "Hybrid", color: t.seq[3] }, { label: "Remote", color: t.seq[5] }]} shape="swatch" />
+            {remoteMix ? <EChart option={remoteMix} height={280} label="Work arrangement mix by year" /> : <Loading height={280} />}
+          </Panel>
+        </div>
+
         <Panel className="span-12" stale={premium.isPlaceholderData}
                title="What is a skill worth?"
                caption={model ? `Pay premium associated with using each technology, holding country, experience, role, company size, education, industry, work arrangement and year constant. OLS on log real pay, ${int(model.n)} developers, 2023–2025, R² ${model.r2.toFixed(2)}, robust standard errors, false-discovery-rate controlled. Hollow markers show the raw gap before controls.` : undefined}
@@ -164,20 +181,6 @@ export default function Pay() {
             : premium.data ? <p className="state">No technologies match these filters.</p> : <Loading height={400} />}
         </Panel>
 
-        <Panel className="span-6" title="Real pay, two ways"
-               caption="Median pay in constant 2025 dollars. The raw median moves with who answered; holding the mix of 35 always-surveyed countries fixed shows the underlying trend."
-               table={workforce.data ? { columns: [
-                 { key: "survey_year", label: "Year" },
-                 { key: "fixed_mix_median_real", label: "Fixed mix", numeric: true, render: (r: { fixed_mix_median_real: number }) => money(r.fixed_mix_median_real) },
-                 { key: "raw_median_real", label: "Raw", numeric: true, render: (r: { raw_median_real: number }) => money(r.raw_median_real) },
-               ], rows: workforce.data.real_pay, filename: "real_pay.csv" } : undefined}>
-          {payTrend ? <EChart option={payTrend} height={300} label="Real pay trend" /> : <Loading height={300} />}
-        </Panel>
-        <Panel className="span-6" title="How developers work"
-               caption="Professional developers by work arrangement, composition-weighted. Not asked in 2018, 2020 or 2021.">
-          <Legend items={[{ label: "In-person", color: t.seq[1] }, { label: "Hybrid", color: t.seq[3] }, { label: "Remote", color: t.seq[5] }]} shape="swatch" />
-          {remoteMix ? <EChart option={remoteMix} height={280} label="Work arrangement mix by year" /> : <Loading height={280} />}
-        </Panel>
       </div>
     </>
   );

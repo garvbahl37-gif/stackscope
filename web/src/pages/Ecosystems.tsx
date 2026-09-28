@@ -61,7 +61,7 @@ export default function Ecosystems() {
                    { key: "degree", label: "Strong ties", numeric: true },
                    { key: "betweenness", label: "Bridge score", numeric: true, render: (r: NetworkNode) => fixed(r.betweenness, 3), value: (r: NetworkNode) => r.betweenness },
                  ], rows: net.data.nodes, filename: `network_nodes_${year}.csv` } : undefined}>
-            {option ? <EChart option={option} height={640} renderer="canvas" events={events} label="Technology co-usage network" /> : <Loading height={640} />}
+            {option ? <EChart option={option} height={740} renderer="canvas" events={events} label="Technology co-usage network" /> : <Loading height={640} />}
           </Panel>
           <div className="span-4" style={{ display: "grid", gap: 18, alignContent: "start" }}>
             <Panel title={selected ? `Developers who use ${selected}` : "Pick a technology"}

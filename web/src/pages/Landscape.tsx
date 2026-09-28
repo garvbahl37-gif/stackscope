@@ -114,9 +114,14 @@ export default function Landscape() {
   );
   const events = useMemo(() => ({ click: (p: { seriesId?: string; name?: string }) => p.seriesId === "techs" && p.name && setSelected(p.name) }), []);
   const rows = useMemo(() => (quad.data?.points ?? []).filter((p) => p.survey_year === shownYear).sort((a, b) => b.adoption - a.adoption), [quad.data, shownYear]);
-  const hhi = useMemo(() => conc.data ? lineOption([{
-    name: "HHI", color: t.series[0], points: conc.data.hhi.map((h) => ({ x: h.survey_year, y: h.hhi })),
-  }], t, { yFormat: (v) => int(v), yMin: 0, compact: false }) : null, [conc.data, t]);
+  // Like for like is the trend; "all options" moves whenever the survey adds or drops answer options.
+  const hhi = useMemo(() => conc.data ? lineOption([
+    { name: "Like for like", color: t.series[0], points: conc.data.hhi.map((h) => ({ x: h.survey_year, y: h.hhi_like_for_like })) },
+    { name: "All options", color: t.ink3, dashed: true, width: 1.5, points: conc.data.hhi.map((h) => ({ x: h.survey_year, y: h.hhi })) },
+  ], t, {
+    yFormat: (v) => int(v), yMin: 0, compact: false, endLabels: true, height: 240,
+    note: (x) => { const r = conc.data?.hhi.find((h) => h.survey_year === x); return r ? `${r.technologies} options listed this year` : null; },
+  }) : null, [conc.data, t]);
   const mind = useMemo(() => (conc.data ? mindshareOption(conc.data.shares, t) : null), [conc.data, t]);
   const categories = (meta.data?.categories ?? []).map((c) => ({ value: c.id, label: c.label }));
   const lastHhi = conc.data?.hhi[conc.data.hhi.length - 1];
@@ -148,17 +153,20 @@ export default function Landscape() {
         </Panel>
 
         <Panel className="span-5" title="Is the market concentrating?"
-               caption={lastHhi ? `Herfindahl-Hirschman Index of mindshare. ${lastHhi.survey_year}: ${int(lastHhi.hhi)}, ${lastHhi.structure.toLowerCase()}, equivalent to ${fixed(lastHhi.effective_competitors, 1)} equal-sized competitors.` : undefined}
+               caption={lastHhi ? `Herfindahl-Hirschman Index of mindshare. Like for like compares each year with the one before on the options listed in both, so new answer options don't move it. ${lastHhi.survey_year}: ${int(lastHhi.hhi)}, ${lastHhi.structure.toLowerCase()}, equivalent to ${fixed(lastHhi.effective_competitors, 1)} equal-sized competitors.` : undefined}
                table={conc.data ? { columns: [
-                 { key: "survey_year", label: "Year" }, { key: "hhi", label: "HHI", numeric: true, render: (r) => int(r.hhi) },
+                 { key: "survey_year", label: "Year" }, { key: "technologies", label: "Options listed", numeric: true },
+                 { key: "hhi_like_for_like", label: "HHI, like for like", numeric: true, render: (r) => int(r.hhi_like_for_like) },
+                 { key: "hhi", label: "HHI, all options", numeric: true, render: (r) => int(r.hhi) },
                  { key: "cr3", label: "Top-3 share", numeric: true, render: (r) => pct(r.cr3) }, { key: "leader", label: "Leader" },
                  { key: "leader_share", label: "Leader share", numeric: true, render: (r) => pct(r.leader_share) }, { key: "structure", label: "Structure" },
                ] as Column<NonNullable<typeof conc.data>["hhi"][number]>[], rows: conc.data.hhi, filename: `concentration_${category}.csv` } : undefined}
                foot="Below 1,500 is competitive, 1,500–2,500 moderately concentrated, above 2,500 highly concentrated (US DoJ guidelines). Mindshare is share of usage mentions, not revenue.">
-          {hhi ? <EChart option={hhi} height={240} label="HHI over time" /> : <Loading height={240} />}
+          {hhi ? <><Legend items={[{ label: "Like for like", color: t.series[0] }, { label: "All options listed that year", color: t.ink3, dashed: true }]} />
+            <EChart option={hhi} height={240} label="HHI over time, like for like and across all options listed" /></> : <Loading height={240} />}
         </Panel>
-        <Panel className="span-7" title="Share of mindshare" caption="Each technology's share of all usage mentions in the category; the seven largest are named.">
-          {mind ? <><Legend items={mind.legend} shape="swatch" /><EChart option={mind.option} height={250} label="Mindshare by year" /></> : <Loading height={260} />}
+        <Panel className="span-7" title="Share of mindshare" caption="Each technology's share of all usage mentions in the category; the seven largest are named. The survey lists a different set of options each year, which moves these shares.">
+          {mind ? <><Legend items={mind.legend} shape="swatch" /><EChart option={mind.option} height={290} label="Mindshare by year" /></> : <Loading height={260} />}
         </Panel>
       </div>
     </>

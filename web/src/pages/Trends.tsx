@@ -71,7 +71,7 @@ export default function Trends() {
     });
     const notes = new Map(trends.data.notes.map((n) => [n.tech, n.note]));
     return lineOption(series, t, {
-      yFormat: (v) => pct(v, 0), valueFormat: fmt, yMin: 0, bands: metric === "adoption", endLabels: series.length <= 6,
+      yFormat: (v) => pct(v, 0), valueFormat: fmt, yMin: 0, bands: metric === "adoption", endLabels: series.length <= 6, height: 440,
       note: (x) => (x > 2025 ? "2026–2027 are projections with an 80% interval learned from backtest errors." :
         [...notes.entries()].length ? `Series notes: ${[...notes.keys()].join(", ")} (see below)` : null),
     });

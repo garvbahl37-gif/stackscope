@@ -84,7 +84,7 @@ function Minis() {
       { name: "Use AI tools", color: t.series[0], points: data.ai.map((r) => ({ x: r.survey_year, y: r.using_w })) },
       { name: "Distrust output", color: t.series[1], points: data.ai.map((r) => ({ x: r.survey_year, y: r.distrust_w })) },
       { name: "Trust output", color: t.series[2], points: data.ai.map((r) => ({ x: r.survey_year, y: r.trust_w })) },
-    ], t, { yFormat: (v) => pct(v, 0), yMin: 0, yMax: 1, yInterval: 0.25, compact: true, endLabels: true });
+    ], t, { yFormat: (v) => pct(v, 0), yMin: 0, yMax: 1, yInterval: 0.25, compact: true, endLabels: true, height: 190 });
     const remote = lineOption([
       { name: "Fully remote", color: t.series[0], points: data.remote.map((r) => ({ x: r.survey_year, y: r.share_w })) },
     ], t, { yFormat: (v) => pct(v, 0), yMin: 0, compact: true });

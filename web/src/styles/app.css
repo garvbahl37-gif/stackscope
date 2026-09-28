@@ -119,6 +119,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .span-6 { grid-column: span 6; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; } .span-3 { grid-column: span 3; }
 @media (max-width: 1180px) { .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; } .span-3 { grid-column: span 6; } }
 @media (max-width: 640px) { .span-3 { grid-column: span 12; } }
+.stack { display: grid; gap: 18px; align-content: start; }   /* panels stacked in one grid column */
 
 .panel {
   background: var(--surface);

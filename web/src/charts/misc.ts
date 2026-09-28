@@ -1,5 +1,5 @@
 import type { EChartsOption } from "echarts";
-import type { NetworkNode } from "../lib/api";
+import type { NetworkNode, ReconRow } from "../lib/api";
 import { fixed, pct } from "../lib/format";
 import type { Tokens } from "../lib/theme";
 import { axisStyle, base, inkOn, tooltip, ttEnd, ttRow, ttSub, ttTitle } from "./base";
@@ -291,3 +291,83 @@ export function waterfallOption(start: { label: string; value: number }, steps: 
 }
 
 export { inkOn };
+
+// ------------------------------------------------------------------------------------------
+// Reconciliation strip: our unweighted figure minus Stack Overflow's published one, by metric,
+// with the tolerance band shaded. Filled = same definition; hollow = larger published base.
+// ------------------------------------------------------------------------------------------
+export const RECON_GROUPS: { key: string; label: string; match: (r: ReconRow) => boolean }[] = [
+  { key: "language", label: "Languages used", match: (r) => r.metric === "share_used" && r.group === "language" },
+  { key: "database", label: "Databases used", match: (r) => r.metric === "share_used" && r.group === "database" },
+  { key: "platform", label: "Cloud platforms used", match: (r) => r.metric === "share_used" && r.group === "platform" },
+  { key: "admired", label: "Admired by users", match: (r) => r.metric === "admired" },
+  { key: "ai_use", label: "AI tool use", match: (r) => r.metric === "ai_use" },
+  { key: "ai_trust", label: "Trust in AI output", match: (r) => r.metric === "ai_trust" },
+  { key: "ai_sentiment", label: "AI sentiment", match: (r) => r.metric === "ai_sentiment" },
+  { key: "remote", label: "Fully remote", match: (r) => r.metric === "remote_work" },
+];
+
+export function reconLabel(r: ReconRow): string {
+  const kind = { share_used: "used", admired: "admired", ai_use: "AI tools", ai_trust: "trust in AI", ai_sentiment: "AI sentiment",
+                 remote_work: "work arrangement", responses: "responses" }[r.metric] ?? r.metric;
+  return r.metric === "share_used" || r.metric === "admired" ? `${r.item} ${kind}, ${r.survey_year}` : `${kind}: ${r.item}, ${r.survey_year}`;
+}
+
+export const RECON_BAND = (t: Tokens) => (t.dark ? "rgba(86,182,203,0.14)" : "rgba(14,102,121,0.09)");
+
+export function reconciliationOption(rows: ReconRow[], tolerance: number, t: Tokens): EChartsOption {
+  const ax = axisStyle(t);
+  const shares = rows.filter((r) => r.unit === "pct");
+  // deterministic jitter so points in the same row do not sit on top of each other
+  const jitter = (r: ReconRow) => ((((r.survey_year * 7919 + r.item.length * 104729) % 1000) / 1000) - 0.5) * 0.5;
+  const point = (r: ReconRow) => {
+    const gi = RECON_GROUPS.findIndex((g) => g.match(r));
+    return { value: [r.diff, gi + jitter(r)], row: r };
+  };
+  const same = shares.filter((r) => r.same_base).map(point);
+  const other = shares.filter((r) => !r.same_base).map(point);
+  const lo = Math.min(-1, ...shares.map((r) => Math.floor(r.diff)));
+  const hi = Math.max(1, ...shares.map((r) => Math.ceil(r.diff)));
+  return {
+    ...base(t),
+    grid: { left: 8, right: 24, top: 12, bottom: 44, containLabel: true },
+    tooltip: tooltip(t, {
+      trigger: "item",
+      formatter: (p: { data?: { row: ReconRow } }) => {
+        const r = p.data?.row;
+        if (!r) return "";
+        return ttTitle(reconLabel(r)) + ttRow(null, "Published", `${fixed(r.published, 2)}%`) + ttRow(null, "Recomputed", `${fixed(r.ours, 2)}%`) +
+          ttRow(null, "Difference", `${r.diff >= 0 ? "+" : ""}${fixed(r.diff, 2)} pp`) +
+          ttSub(r.same_base ? "Same definition as the published figure" : "Published share uses a larger base; the count of users matches") + ttEnd;
+      },
+    }),
+    xAxis: {
+      type: "value", min: lo, max: hi, interval: 1, ...ax, name: "Recomputed minus published (percentage points)",
+      nameLocation: "middle", nameGap: 28, axisLine: { show: false, onZero: false },
+      axisLabel: { ...ax.axisLabel, formatter: (v: number) => (v > 0 ? `+${v}` : String(v)) },
+    },
+    yAxis: {
+      // rows sit on whole numbers; labels and ticks are pinned there (min/max leave room for the jitter)
+      type: "value", min: -0.5, max: RECON_GROUPS.length - 0.5, inverse: true, ...ax, splitLine: { show: false },
+      axisTick: { show: false }, axisLine: { show: false },
+      axisLabel: { ...ax.axisLabel, color: t.ink2, fontSize: 12, customValues: RECON_GROUPS.map((_, i) => i),
+                   formatter: (v: number) => RECON_GROUPS[Math.round(v)]?.label ?? "" },
+    },
+    series: [
+      {
+        id: "same", name: "Same definition", type: "scatter", data: same, symbolSize: 8,
+        itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 1.5, opacity: 0.9 },
+        markArea: {
+          silent: true, itemStyle: { color: RECON_BAND(t) }, label: { show: false },
+          data: [[{ xAxis: -tolerance }, { xAxis: tolerance }]] as never,
+        },
+        markLine: { silent: true, symbol: "none", lineStyle: { color: t.axis, width: 1, type: "solid" }, label: { show: false }, data: [{ xAxis: 0 }] },
+        z: 3,
+      },
+      {
+        id: "other", name: "Larger published base", type: "scatter", data: other, symbolSize: 8,
+        itemStyle: { color: t.surface, borderColor: t.series[1], borderWidth: 2 }, z: 3,
+      },
+    ],
+  } as EChartsOption;
+}
