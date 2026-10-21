@@ -1,8 +1,9 @@
 import type { EChartsOption } from "echarts";
 import type { Tokens } from "../lib/theme";
-import { axisStyle, base, inkOn, tooltip, ttEnd, ttRow, ttSub, ttTitle } from "./base";
+import { axisStyle, barTrack, base, inkOn, shadowPointer, tooltip, ttEnd, ttRow, ttSub, ttTitle, withAlpha } from "./base";
 
-const BAR = 12; // thin marks (<= 24px), air between bands
+const BAR = 14; // pill-shaped marks (<= 24px), air between bands
+const ROUND = 999;
 
 /** Horizontal P25-P75 range with a median dot, sorted by the caller. */
 export function rangeDotOption(rows: { label: string; lo: number; mid: number; hi: number; n: number }[], t: Tokens, fmt: (v: number) => string, opts: { reference?: { value: number; label: string } } = {}): EChartsOption {
@@ -12,7 +13,7 @@ export function rangeDotOption(rows: { label: string; lo: number; mid: number; h
     ...base(t),
     grid: { left: 8, right: 40, top: opts.reference ? 34 : 22, bottom: 28, containLabel: true },
     tooltip: tooltip(t, {
-      trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: t.dark ? "rgba(255,255,255,0.04)" : "rgba(15,42,51,0.04)" } },
+      trigger: "axis", axisPointer: shadowPointer(t),
       formatter: (params: { dataIndex: number }[]) => {
         const r = rows[params[0].dataIndex];
         return ttTitle(r.label) + ttRow(t.series[0], "Median", fmt(r.mid), "dot") + ttRow(null, "Middle 50%", `${fmt(r.lo)} – ${fmt(r.hi)}`) +
@@ -24,8 +25,8 @@ export function rangeDotOption(rows: { label: string; lo: number; mid: number; h
     series: [
       { id: "base", type: "bar", stack: "r", data: rows.map((r) => r.lo), itemStyle: { color: "transparent" }, barWidth: BAR, silent: true },
       {
-        id: "iqr", type: "bar", stack: "r", data: rows.map((r) => r.hi - r.lo), barWidth: BAR,
-        itemStyle: { color: t.dark ? "rgba(57,135,229,0.35)" : "rgba(42,120,214,0.22)", borderRadius: 6 },
+        id: "iqr", type: "bar", stack: "r", data: rows.map((r) => r.hi - r.lo), barWidth: BAR, ...barTrack(t),
+        itemStyle: { color: withAlpha(t.series[0], t.dark ? 0.42 : 0.3), borderRadius: ROUND },
         markLine: opts.reference ? {
           silent: true, symbol: "none", lineStyle: { color: t.ink3, width: 1, type: "solid" },
           // the y-axis is inverted, so "start" is the top of the line: clear of the x-axis labels
@@ -35,8 +36,8 @@ export function rangeDotOption(rows: { label: string; lo: number; mid: number; h
         } : undefined,
       },
       {
-        id: "median", type: "scatter", data: rows.map((r) => r.mid), symbolSize: 10,
-        itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 2 },
+        id: "median", type: "scatter", data: rows.map((r) => r.mid), symbolSize: 13,
+        itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 3 },
         // surface-coloured label background keeps values legible where the reference line crosses them
         label: { show: true, position: "right", distance: 10, formatter: (p: { value: number }) => fmt(p.value), color: t.ink2, fontSize: 11,
                  backgroundColor: t.surface, padding: [1, 3], borderRadius: 3 },
@@ -66,7 +67,7 @@ export function divergingBarOption(rows: { label: string; value: number; note?: 
       id: "delta", type: "bar", barWidth: BAR,
       data: rows.map((r) => ({
         value: r.value,
-        itemStyle: { color: r.value >= 0 ? t.div.pos2 : t.div.neg2, borderRadius: r.value >= 0 ? [0, 4, 4, 0] : [4, 0, 0, 4] },
+        itemStyle: { color: r.value >= 0 ? t.div.pos2 : t.div.neg2, borderRadius: r.value >= 0 ? [0, ROUND, ROUND, 0] : [ROUND, 0, 0, ROUND] },
         label: { position: r.value >= 0 ? "right" : "left" },
       })),
       label: { show: true, formatter: (p: { value: number }) => fmt(p.value), color: t.ink2, fontSize: 11 },
@@ -98,7 +99,7 @@ export function forestOption(rows: { label: string; est: number; lo: number; hi:
     ...base(t),
     grid: { left: 8, right: 30, top: 8, bottom: 30, containLabel: true },
     tooltip: tooltip(t, {
-      trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: t.dark ? "rgba(255,255,255,0.04)" : "rgba(15,42,51,0.04)" } },
+      trigger: "axis", axisPointer: shadowPointer(t),
       formatter: (params: { dataIndex: number }[]) => {
         const r = rows[params[0].dataIndex];
         return ttTitle(r.label) + ttRow(t.series[0], opts.estLabel ?? "Estimate", opts.fmt(r.est), "dot") +
@@ -124,7 +125,8 @@ export function forestOption(rows: { label: string; est: number; lo: number; hi:
           const a = api.coord([r.lo, idx]);
           const b = api.coord([r.hi, idx]);
           return { type: "line", shape: { x1: a[0], y1: a[1], x2: b[0], y2: b[1] },
-                   style: { stroke: r.strong === false ? t.deemph : t.series[0], lineWidth: 2, lineCap: "round" } };
+                   style: { stroke: withAlpha(r.strong === false ? t.deemph : t.series[0], r.strong === false ? 0.6 : t.dark ? 0.45 : 0.32),
+                            lineWidth: 8, lineCap: "round" } };
         },
         data: rows.map((_, i) => [i]),
         encode: { y: 0 },
@@ -135,18 +137,18 @@ export function forestOption(rows: { label: string; est: number; lo: number; hi:
         },
       },
       ...(rows.some((r) => r.compare !== undefined) ? [{
-        id: "compare", type: "scatter", data: rows.map((r) => r.compare ?? null), symbolSize: 8,
-        itemStyle: { color: t.surface, borderColor: t.ink3, borderWidth: 1.5 }, z: 2,
+        id: "compare", type: "scatter", data: rows.map((r) => r.compare ?? null), symbolSize: 9,
+        itemStyle: { color: t.surface, borderColor: t.ink3, borderWidth: 2 }, z: 2,
       }] : []),
       {
         id: "est", type: "scatter", data: rows.map((r) => ({ value: r.est, itemStyle: { color: r.strong === false ? t.deemph : t.series[0] } })),
-        symbolSize: 10, itemStyle: { borderColor: t.surface, borderWidth: 2 }, z: 3,
+        symbolSize: 12, itemStyle: { borderColor: t.surface, borderWidth: 2.5 }, z: 3,
       },
     ],
   } as EChartsOption;
 }
 
-/** 100% stacked bars (ordinal or diverging segments), 2px surface gap between segments. */
+/** 100% stacked bars (ordinal or diverging segments): a 2px surface gap between segments, rounded stack ends. */
 export function stackedShareOption(categories: string[], segments: { name: string; color: string; values: (number | null)[] }[], t: Tokens, opts: {
   horizontal?: boolean;
   fmt: (v: number) => string;
@@ -159,7 +161,7 @@ export function stackedShareOption(categories: string[], segments: { name: strin
     ...base(t),
     grid: { left: 8, right: 16, top: 8, bottom: 24, containLabel: true },
     tooltip: tooltip(t, {
-      trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: t.dark ? "rgba(255,255,255,0.04)" : "rgba(15,42,51,0.04)" } },
+      trigger: "axis", axisPointer: shadowPointer(t),
       formatter: (params: { dataIndex: number }[]) => {
         const i = params[0].dataIndex;
         return ttTitle(categories[i]) + segments.map((s) => (s.values[i] == null ? "" : ttRow(s.color, s.name, opts.fmt(s.values[i] as number), "rect"))).join("") + ttEnd;
@@ -167,10 +169,10 @@ export function stackedShareOption(categories: string[], segments: { name: strin
     }),
     xAxis: opts.horizontal ? valAxis : catAxis,
     yAxis: opts.horizontal ? catAxis : valAxis,
-    series: segments.map((s) => ({
-      id: s.name, name: s.name, type: "bar", stack: "share", barWidth: opts.horizontal ? 18 : 24,
+    series: segments.map((s, i) => ({
+      id: s.name, name: s.name, type: "bar", stack: "share", barWidth: opts.horizontal ? 22 : 28,
       data: s.values,
-      itemStyle: { color: s.color, borderColor: t.surface, borderWidth: 1 },
+      itemStyle: { color: s.color, borderColor: t.surface, borderWidth: 2, borderRadius: stackEnds(i, segments.length, !!opts.horizontal) },
       label: {
         show: true, fontSize: 10.5, fontWeight: 600,
         formatter: (p: { value: number }) => (p.value >= (opts.labelMin ?? 0.08) ? opts.fmt(p.value) : ""),
@@ -179,6 +181,14 @@ export function stackedShareOption(categories: string[], segments: { name: strin
       emphasis: { focus: "series" },
     })),
   } as EChartsOption;
+}
+
+/** Corner radii that round only the two outer ends of a stack. */
+export function stackEnds(i: number, n: number, horizontal: boolean): number[] {
+  const r = 7;
+  const first = i === 0, last = i === n - 1;
+  if (horizontal) return [first ? r : 0, last ? r : 0, last ? r : 0, first ? r : 0];
+  return [last ? r : 0, last ? r : 0, first ? r : 0, first ? r : 0];
 }
 
 /** Single-series bars (one entity type -> one hue), value at the tip. */
@@ -194,8 +204,8 @@ export function simpleBarOption(rows: { label: string; value: number; highlight?
     xAxis: horizontal ? val : cat,
     yAxis: horizontal ? cat : val,
     series: [{
-      id: "bars", type: "bar", barWidth: BAR,
-      data: rows.map((r) => ({ value: r.value, itemStyle: { color: r.highlight === false ? t.deemph : t.series[0], borderRadius: horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0] } })),
+      id: "bars", type: "bar", barWidth: BAR, ...barTrack(t),
+      data: rows.map((r) => ({ value: r.value, itemStyle: { color: r.highlight === false ? t.deemph : t.series[0], borderRadius: ROUND } })),
       label: { show: true, position: horizontal ? "right" : "top", formatter: (p: { value: number }) => fmt(p.value), color: t.ink2, fontSize: 11 },
     }],
   } as EChartsOption;

@@ -8,6 +8,19 @@ import { base, tooltip, ttEnd, ttRow, ttSub, ttTitle } from "./base";
 
 let registered: Promise<void> | null = null;
 
+type Ring = number[][];
+/** A ring that crosses the antimeridian (Russia's Chukotka, Fiji) would be drawn as a stripe across the whole map;
+ *  fold its far side onto the 180° meridian instead. */
+function foldRing(ring: Ring): Ring {
+  const crosses = ring.some((p, i) => i > 0 && Math.abs(p[0] - ring[i - 1][0]) > 180);
+  return crosses ? ring.map(([x, y]) => [x < 0 ? 180 : x, y]) : ring;
+}
+function foldGeometry(g: { type: string; coordinates: unknown }) {
+  if (g.type === "Polygon") return { ...g, coordinates: (g.coordinates as Ring[]).map(foldRing) };
+  if (g.type === "MultiPolygon") return { ...g, coordinates: (g.coordinates as Ring[][]).map((poly) => poly.map(foldRing)) };
+  return g;
+}
+
 /** Lazily load the 110m world atlas and register it with ECharts, keyed by ISO-3166 numeric id. */
 export function ensureWorldMap(): Promise<void> {
   if (!registered) {
@@ -16,7 +29,11 @@ export function ensureWorldMap(): Promise<void> {
       const geo = feature(topo, topo.objects.countries) as unknown as FeatureCollection;
       geo.features = geo.features
         .filter((f) => f.properties?.name !== "Antarctica")
-        .map((f) => ({ ...f, properties: { ...(f.properties ?? {}), iso_n: String(Number(f.id)) } }));
+        .map((f) => ({
+          ...f,
+          geometry: f.geometry ? foldGeometry(f.geometry as never) : f.geometry,
+          properties: { ...(f.properties ?? {}), iso_n: String(Number(f.id)) },
+        })) as FeatureCollection["features"];
       echarts.registerMap("world", geo as never);
     });
   }
@@ -42,14 +59,14 @@ export function choroplethOption(rows: MapRow[], t: Tokens, fmt: (v: number) => 
       },
     }),
     visualMap: {
-      type: "continuous", min: q(0.02), max: q(0.98), left: 12, bottom: 12, itemWidth: 10, itemHeight: 120,
-      inRange: { color: t.seq }, text: [fmt(q(0.98)), fmt(q(0.02))], textStyle: { color: t.ink3, fontSize: 11 }, calculable: false,
+      type: "continuous", min: q(0.02), max: q(0.98), left: 12, bottom: 12, itemWidth: 8, itemHeight: 120,
+      inRange: { color: t.heat }, text: [fmt(q(0.98)), fmt(q(0.02))], textStyle: { color: t.ink2, fontSize: 11, fontWeight: 600 }, calculable: false,
     },
     series: [{
       id: "map", type: "map", map: "world", nameProperty: "iso_n", roam: true, scaleLimit: { min: 1, max: 6 },
       zoom: 1.12, center: [12, 18],
-      itemStyle: { areaColor: t.dark ? "#222c30" : "#e6ebea", borderColor: t.surface, borderWidth: 0.6 },
-      emphasis: { label: { show: false }, itemStyle: { areaColor: t.brand, borderColor: t.surface } },
+      itemStyle: { areaColor: t.mapNone, borderColor: t.surface, borderWidth: 0.7 },
+      emphasis: { label: { show: false }, itemStyle: { areaColor: t.inverse, borderColor: t.surface } },
       select: { disabled: true },
       data: rows.filter((r) => r.value != null).map((r) => ({ name: String(r.iso_numeric), value: r.value })),
     }],

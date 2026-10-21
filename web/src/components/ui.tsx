@@ -1,17 +1,29 @@
 import { AlertTriangle, CheckCircle2, Download, Pause, Play, Table2, XCircle } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { downloadCsv } from "../lib/format";
 
 // ------------------------------------------------------------------------------------------
 // Page header
 // ------------------------------------------------------------------------------------------
-export function PageHeader({ title, lede, actions }: { title: string; lede?: ReactNode; actions?: ReactNode }) {
+export type Figure = { value: ReactNode; label: string; chip?: ReactNode };
+
+export function PageHeader({ title, lede, actions, figures }: { title: string; lede?: ReactNode; actions?: ReactNode; figures?: Figure[] }) {
   return (
     <header className="page-head">
       <div>
         <h1 className="page-title">{title}</h1>
         {lede && <p className="page-lede">{lede}</p>}
       </div>
+      {figures && (
+        <div className="page-figures">
+          {figures.map((f) => (
+            <div key={f.label}>
+              <div className="figure__value">{f.value}{f.chip && <span className="figure__chip">{f.chip}</span>}</div>
+              <div className="figure__label">{f.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
       {actions && <div className="page-actions">{actions}</div>}
     </header>
   );
@@ -99,9 +111,9 @@ export function Panel<T extends object>({ title, caption, children, table, tools
             {tools}
             {table && (
               <>
-                <button type="button" className="icon-btn" aria-pressed={showTable} onClick={() => setShowTable((s) => !s)}
-                        title={showTable ? "Show chart" : "Show data table"}>
-                  <Table2 aria-hidden /> <span>{showTable ? "Chart" : "Table"}</span>
+                <button type="button" className="icon-btn icon-btn--outline" aria-pressed={showTable} onClick={() => setShowTable((s) => !s)}
+                        title={showTable ? "Show chart" : "Show data table"} aria-label="Show data table">
+                  <Table2 aria-hidden />
                 </button>
                 <button type="button" className="icon-btn" onClick={exportCsv} title="Download CSV" aria-label="Download CSV">
                   <Download aria-hidden />
@@ -208,6 +220,7 @@ export function YearScrubber({ years, value, onChange, autoplay = false }: {
       </button>
       <input type="range" min={0} max={years.length - 1} step={1} value={idx}
              aria-label="Survey year" aria-valuetext={String(value)}
+             style={{ "--p": `${years.length > 1 ? (idx / (years.length - 1)) * 100 : 100}%` } as CSSProperties}
              onChange={(e) => { setPlaying(false); onChange(years[Number(e.target.value)]); }} />
       <span className="year-scrubber__value">{value}</span>
     </div>

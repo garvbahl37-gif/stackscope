@@ -1,6 +1,6 @@
 import type { EChartsOption } from "echarts";
 import type { Tokens } from "../lib/theme";
-import { axisStyle, base, tooltip, ttEnd, ttRow, ttSub, ttTitle } from "./base";
+import { areaFade, axisStyle, base, inkOn, linePointer, tooltip, ttEnd, ttRow, ttSub, ttTitle, withAlpha } from "./base";
 
 export type LinePoint = { x: number; y: number | null; lo?: number | null; hi?: number | null };
 export type LineSeries = {
@@ -28,9 +28,10 @@ type Opts = {
   height?: number;   // rendered chart height; lets end labels be laid out exactly (pass it whenever endLabels is on)
 };
 
-const LABEL_FONT = 11.5;
-const LABEL_HEIGHT = 15;      // px per end label, including breathing room
-const CHAR_WIDTH = 6.6;       // average advance width at LABEL_FONT, used to size the right margin
+const LABEL_FONT = 11;
+const LABEL_HEIGHT = 24;      // px per end-label pill, including breathing room
+const CHAR_WIDTH = 6.7;       // average advance width at LABEL_FONT (semibold), used to size the right margin
+const PILL_PAD = 30;          // pill padding plus the gap between the line's end and its pill
 
 /** A "nice" axis step (1, 2, 2.5 or 5 x 10^k) that splits `range` into about five intervals, as ECharts does. */
 function niceStep(range: number): number {
@@ -69,16 +70,11 @@ function dodge(targets: number[], gap: number, lo: number, hi: number): number[]
   return out;
 }
 
-function withAlpha(hex: string, alpha: number): string {
-  const h = hex.replace("#", "");
-  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
-}
-
 /**
  * Multi-series line chart on a shared category x-axis of years, with optional 95% bands
  * (stacked-area trick: an invisible lower line plus a translucent upper-lower difference),
- * a dashed projection segment, direct end labels and a one-tooltip-every-series crosshair.
+ * a dashed projection segment, pill end labels and a one-tooltip-every-series dashed crosshair. Points stay hidden
+ * until hovered; a lone series gets a fading area beneath it.
  */
 export function lineOption(series: LineSeries[], t: Tokens, opts: Opts): EChartsOption {
   const xs = [...new Set(series.flatMap((s) => s.points.map((p) => p.x)))].sort((a, b) => a - b);
@@ -88,7 +84,7 @@ export function lineOption(series: LineSeries[], t: Tokens, opts: Opts): ECharts
   const out: Record<string, unknown>[] = [];
   const grid = {
     left: opts.compact ? 38 : 56,
-    right: opts.endLabels ? Math.min(190, Math.max(96, Math.ceil(Math.max(...series.map((s) => s.name.length)) * CHAR_WIDTH + 18))) : 20,
+    right: opts.endLabels ? Math.min(210, Math.max(100, Math.ceil(Math.max(...series.map((s) => s.name.length)) * CHAR_WIDTH + PILL_PAD))) : 20,
     top: opts.compact ? 10 : 16,
     bottom: opts.compact ? 22 : opts.xLabel ? 44 : 30,
   };
@@ -114,6 +110,8 @@ export function lineOption(series: LineSeries[], t: Tokens, opts: Opts): ECharts
     labelled.forEach((i, k) => labelOffset.set(i, placed[k] - wanted[k]));
   }
 
+  const area = series.length === 1 && !opts.bands && !series[0].dashed;
+  const endLabels: Record<string, unknown>[] = [];
   series.forEach((s, i) => {
     const byX = new Map(s.points.map((p) => [p.x, p]));
     const val = (x: number) => byX.get(x)?.y ?? null;
@@ -131,18 +129,11 @@ export function lineOption(series: LineSeries[], t: Tokens, opts: Opts): ECharts
     }
     const split = s.forecastFrom;
     const actual = xs.map((x) => (split === undefined || x <= split ? val(x) : null));
-    // Direct label on the series' last point (static; ECharts' animated endLabel misplaces text on some frames)
-    const labelled = (arr: (number | null)[], show: boolean) => {
-      const last = arr.reduce<number>((acc, v, idx) => (v == null ? acc : idx), -1);
-      return arr.map((v, idx) => (idx === last && show && v != null
-        ? { value: v, label: { show: true, position: "right" as const, distance: 6, formatter: s.name, color: t.ink2, fontSize: LABEL_FONT,
-                               fontFamily: t.font, offset: [0, labelOffset.get(i) ?? 0] } }
-        : v));
-    };
     out.push({
-      id: `line-${s.name}`, name: s.name, type: "line", data: labelled(actual, !!opts.endLabels && split === undefined), symbol: "circle", symbolSize: opts.compact ? 5 : 7,
-      showSymbol: !opts.compact, lineStyle: { color: s.color, width: s.width ?? 2, cap: "round", join: "round", type: s.dashed ? [5, 4] : "solid" },
-      itemStyle: { color: s.color, borderColor: t.surface, borderWidth: 2 },
+      id: `line-${s.name}`, name: s.name, type: "line", data: actual, symbol: "circle", symbolSize: 10, showSymbol: false,
+      lineStyle: { color: s.color, width: s.width ?? 2.2, cap: "round", join: "round", type: s.dashed ? [5, 4] : "solid" },
+      itemStyle: { color: t.surface, borderColor: s.color, borderWidth: 2.5 },
+      areaStyle: area ? { color: areaFade(s.color, t.dark ? 0.3 : 0.22) } : undefined,
       emphasis: { focus: "series" },
       z: 3,
       markLine: opts.markX && i === 0 ? {
@@ -154,19 +145,36 @@ export function lineOption(series: LineSeries[], t: Tokens, opts: Opts): ECharts
     if (split !== undefined) {
       const proj = xs.map((x) => (x >= split ? val(x) : null));
       out.push({
-        id: `proj-${s.name}`, name: `${s.name} (projection)`, type: "line", data: labelled(proj, !!opts.endLabels), symbol: "circle", symbolSize: 6,
+        id: `proj-${s.name}`, name: `${s.name} (projection)`, type: "line", data: proj, symbol: "circle", symbolSize: 6,
         lineStyle: { color: s.color, width: 2, type: [5, 4] }, itemStyle: { color: t.surface, borderColor: s.color, borderWidth: 2 },
           z: 3, tooltip: { show: false },
       });
     }
+    // Pill label beside the series' last point, carried by a silent scatter (labels on a line need visible symbols)
+    const lastX = [...xs].reverse().find((x) => val(x) != null);
+    if (opts.endLabels && lastX !== undefined) {
+      const fill = s.dashed ? t.surface : s.color;
+      endLabels.push({
+        value: [String(lastX), val(lastX)],
+        label: {
+          show: true, position: "right", distance: 9, formatter: s.name, offset: [0, labelOffset.get(i) ?? 0],
+          color: s.dashed ? t.ink2 : inkOn(s.color), backgroundColor: fill, borderColor: s.dashed ? t.axis : fill, borderWidth: 1,
+          borderRadius: 999, padding: [4, 9], fontFamily: t.font, fontSize: LABEL_FONT, fontWeight: 600, lineHeight: 13,
+        },
+      });
+    }
   });
+  if (endLabels.length) {
+    out.push({ id: "end-labels", type: "scatter", data: endLabels, symbolSize: 0, silent: true, tooltip: { show: false }, z: 4,
+               animation: false });
+  }
 
   return {
     ...base(t),
     grid,
     tooltip: tooltip(t, {
       trigger: "axis",
-      axisPointer: { type: "line", lineStyle: { color: t.axis, width: 1 } },
+      axisPointer: linePointer(t),
       formatter: (params: { axisValue: string; seriesName: string; seriesId: string; value: number | null }[]) => {
         const x = Number(params[0]?.axisValue);
         let html = ttTitle(String(x));
@@ -182,7 +190,8 @@ export function lineOption(series: LineSeries[], t: Tokens, opts: Opts): ECharts
       },
     }),
     xAxis: {
-      type: "category", data: cat, boundaryGap: false, ...ax, splitLine: { show: false },
+      type: "category", data: cat, boundaryGap: false, ...ax,
+      splitLine: { show: !opts.compact, lineStyle: { color: t.grid, width: 1, type: [4, 4] } },
       name: opts.xLabel, nameLocation: "middle", nameGap: 28,
     },
     yAxis: {

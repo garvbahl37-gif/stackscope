@@ -6,6 +6,8 @@ export type Tokens = {
   surface: string; surface2: string; plane: string;
   ink: string; ink2: string; ink3: string; line: string;
   grid: string; axis: string; axisInk: string; deemph: string; brand: string;
+  inverse: string; inverseInk: string;
+  heat: string[]; pillGrey: string; mapNone: string; up: string;
   series: string[]; seq: string[];
   div: { neg2: string; neg1: string; mid: string; pos1: string; pos2: string };
   status: { good: string; warning: string; serious: string; critical: string };
@@ -20,6 +22,8 @@ function read(): Tokens {
     surface: v("--surface"), surface2: v("--surface-2"), plane: v("--plane"),
     ink: v("--ink"), ink2: v("--ink-2"), ink3: v("--ink-3"), line: v("--line"),
     grid: v("--grid"), axis: v("--axis"), axisInk: v("--axis-ink"), deemph: v("--deemph"), brand: v("--brand"),
+    inverse: v("--inverse"), inverseInk: v("--inverse-ink"),
+    heat: ["--heat-1", "--heat-2", "--heat-3", "--heat-4"].map(v), pillGrey: v("--pill-grey"), mapNone: v("--map-none"), up: v("--up"),
     series: ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7", "--s8"].map(v),
     seq: ["--q1", "--q2", "--q3", "--q4", "--q5", "--q6", "--q7"].map(v),
     div: { neg2: v("--d-neg-2"), neg1: v("--d-neg-1"), mid: v("--d-mid"), pos1: v("--d-pos-1"), pos2: v("--d-pos-2") },

@@ -1,6 +1,7 @@
 import type { EChartsOption } from "echarts";
 import { useMemo, useState } from "react";
-import { axisStyle, base, tooltip, ttEnd, ttRow, ttTitle } from "../charts/base";
+import { stackEnds } from "../charts/bars";
+import { axisStyle, base, shadowPointer, tooltip, ttEnd, ttRow, ttTitle } from "../charts/base";
 import { lineOption } from "../charts/lines";
 import { quadrantOption } from "../charts/quadrant";
 import { EChart } from "../components/EChart";
@@ -62,9 +63,9 @@ function mindshareOption(shares: { survey_year: number; tech: string; mindshare:
   const color = (tech: string, i: number) => (tech === "Others" ? t.deemph : t.series[i % 8]);
   const ax = axisStyle(t);
   const series = order.map((tech, i) => ({
-    id: tech, name: tech, type: "bar" as const, stack: "m", barWidth: 22,
+    id: tech, name: tech, type: "bar" as const, stack: "m", barWidth: 28,
     data: years.map((y) => shares.find((s) => s.survey_year === y && s.tech === tech)?.mindshare ?? 0),
-    itemStyle: { color: color(tech, i), borderColor: t.surface, borderWidth: 1 },
+    itemStyle: { color: color(tech, i), borderColor: t.surface, borderWidth: 2, borderRadius: stackEnds(i, order.length, false) },
     emphasis: { focus: "series" as const },
   }));
   return {
@@ -73,7 +74,7 @@ function mindshareOption(shares: { survey_year: number; tech: string; mindshare:
       ...base(t),
       grid: { left: 8, right: 12, top: 8, bottom: 24, containLabel: true },
       tooltip: tooltip(t, {
-        trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(15,42,51,0.04)" } },
+        trigger: "axis", axisPointer: shadowPointer(t),
         formatter: (params: { dataIndex: number }[]) => {
           const i = params[0].dataIndex;
           return ttTitle(String(years[i])) + order.map((tech, k) => ttRow(color(tech, k), tech, pct(series[k].data[i], 1), "rect")).reverse().join("") + ttEnd;

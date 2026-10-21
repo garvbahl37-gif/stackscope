@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import { useMemo, useState } from "react";
 import { forestOption, stackedShareOption } from "../charts/bars";
-import { axisStyle, base, tooltip, ttEnd, ttRow, ttTitle } from "../charts/base";
+import { axisStyle, base, shadowPointer, tooltip, ttEnd, ttRow, ttTitle } from "../charts/base";
 import { lineOption } from "../charts/lines";
 import { EChart } from "../components/EChart";
 import { ErrorState, Legend, Loading, PageHeader, Panel, Segmented } from "../components/ui";
@@ -30,7 +30,7 @@ function dumbbellOption(rows: { label: string; a: number; b: number }[], t: Toke
     ...base(t),
     grid: { left: 8, right: 24, top: 8, bottom: 24, containLabel: true },
     tooltip: tooltip(t, {
-      trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(15,42,51,0.04)" } },
+      trigger: "axis", axisPointer: shadowPointer(t),
       formatter: (params: { dataIndex: number }[]) => {
         const r = rows[params[0].dataIndex];
         return ttTitle(r.label) + ttRow(t.series[0], names[0], pct(r.a, 0), "dot") + ttRow(t.series[1], names[1], pct(r.b, 0), "dot") +
@@ -46,11 +46,11 @@ function dumbbellOption(rows: { label: string; a: number; b: number }[], t: Toke
           const i = api.value(0);
           const p1 = api.coord([rows[i].a, i]);
           const p2 = api.coord([rows[i].b, i]);
-          return { type: "line", shape: { x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1] }, style: { stroke: t.axis, lineWidth: 2 } };
+          return { type: "line", shape: { x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1] }, style: { stroke: t.surface2, lineWidth: 10, lineCap: "round" } };
         },
       },
-      { id: "a", name: names[0], type: "scatter", data: rows.map((r) => r.a), symbolSize: 11, itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 2 }, z: 3 },
-      { id: "b", name: names[1], type: "scatter", data: rows.map((r) => r.b), symbolSize: 11, itemStyle: { color: t.series[1], borderColor: t.surface, borderWidth: 2 }, z: 3 },
+      { id: "a", name: names[0], type: "scatter", data: rows.map((r) => r.a), symbolSize: 13, itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 2.5 }, z: 3 },
+      { id: "b", name: names[1], type: "scatter", data: rows.map((r) => r.b), symbolSize: 13, itemStyle: { color: t.series[1], borderColor: t.surface, borderWidth: 2.5 }, z: 3 },
     ],
   } as EChartsOption;
 }
@@ -101,7 +101,7 @@ export default function Ai() {
     const tasksChart: EChartsOption = {
       ...base(t),
       grid: { left: 8, right: 36, top: 8, bottom: 24, containLabel: true },
-      tooltip: tooltip(t, { trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(15,42,51,0.04)" } },
+      tooltip: tooltip(t, { trigger: "axis", axisPointer: shadowPointer(t),
         formatter: (params: { dataIndex: number }[]) => {
           const task = taskOrder[params[0].dataIndex];
           return ttTitle(task) + years.map((y, i) => {
@@ -112,9 +112,9 @@ export default function Ai() {
       xAxis: { type: "value", ...ax, axisLine: { show: false }, axisLabel: { ...ax.axisLabel, formatter: (v: number) => pct(v, 0) } },
       yAxis: { type: "category", data: taskOrder, inverse: true, ...ax, splitLine: { show: false }, axisLabel: { ...ax.axisLabel, color: t.ink2, fontSize: 12 } },
       series: years.map((y, i) => ({
-        id: String(y), name: String(y), type: "bar", barWidth: 7, barGap: "35%",
+        id: String(y), name: String(y), type: "bar", barWidth: 7, barGap: "45%",
         data: taskOrder.map((task) => data.tasks.find((r) => r.task === task && r.survey_year === y)?.share_w ?? null),
-        itemStyle: { color: ramp[i], borderRadius: [0, 3, 3, 0] },
+        itemStyle: { color: ramp[i], borderRadius: 999 },
       })),
     } as EChartsOption;
 

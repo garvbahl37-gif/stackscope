@@ -7,7 +7,7 @@ import { NavLink, Outlet, useLocation } from "react-router";
 import { setThemePref, useThemePref } from "../lib/theme";
 import { Loading } from "./ui";
 
-const NAV = [
+export const NAV = [
   { group: "Market", items: [
     { to: "/", label: "Overview", icon: LayoutDashboard },
     { to: "/landscape", label: "Market landscape", icon: Grid2x2 },
@@ -33,9 +33,9 @@ const NAV = [
 export function BrandMark({ size = 28 }: { size?: number }) {
   return (
     <svg className="brand__mark" width={size} height={size} viewBox="0 0 28 28" aria-hidden>
-      <rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="#5fb8cb" strokeWidth="1.5" />
-      <path d="M14 5v18M5 14h18" stroke="#5fb8cb" strokeWidth="1.5" />
-      <circle cx="19.5" cy="8.5" r="3" fill="#f3f7f6" />
+      <rect className="brand__frame" x="1" y="1" width="26" height="26" rx="8" fill="none" strokeWidth="1.75" />
+      <path className="brand__frame" d="M14 5v18M5 14h18" strokeWidth="1.75" />
+      <circle className="brand__dot" cx="19.5" cy="8.5" r="3" />
     </svg>
   );
 }
@@ -43,10 +43,11 @@ export function BrandMark({ size = 28 }: { size?: number }) {
 function ThemeToggle() {
   const pref = useThemePref();
   const dark = pref === "dark" || (pref === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const label = dark ? "Light theme" : "Dark theme";
   return (
-    <button type="button" className="theme-toggle" onClick={() => setThemePref(dark ? "light" : "dark")}>
-      {dark ? <Sun size={14} aria-hidden /> : <Moon size={14} aria-hidden />}
-      {dark ? "Light theme" : "Dark theme"}
+    <button type="button" className="theme-toggle" onClick={() => setThemePref(dark ? "light" : "dark")} aria-label={label}>
+      {dark ? <Sun aria-hidden /> : <Moon aria-hidden />}
+      <span className="nav-link__label" aria-hidden>{label}</span>
     </button>
   );
 }
@@ -62,34 +63,30 @@ export function Shell() {
   return (
     <div className="shell" data-nav-open={open}>
       <div className="topbar">
-        <span className="brand" style={{ padding: 0 }}><BrandMark size={24} /><span className="brand__name">StackScope</span></span>
+        <span className="topbar__brand"><BrandMark size={26} /><span className="brand__name">StackScope</span></span>
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="Menu">
           {open ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
       {open && <div className="scrim" onClick={() => setOpen(false)} aria-hidden />}
       <nav className="rail" aria-label="Main">
-        <NavLink to="/" className="brand">
+        <NavLink to="/" className="brand" aria-label="StackScope home">
           <BrandMark />
-          <span>
-            <span className="brand__name">StackScope</span>
-            <span className="brand__sub">Technology market intelligence</span>
-          </span>
+          <span className="brand__name topbar-only">StackScope</span>
         </NavLink>
         {NAV.map((g) => (
           <div className="nav-group" key={g.group}>
             <div className="nav-group__label">{g.group}</div>
             {g.items.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} end={to === "/"} className="nav-link">
-                <Icon aria-hidden />
-                {label}
+              <NavLink key={to} to={to} end={to === "/"} className="nav-link" aria-label={label}>
+                <span className="nav-link__icon"><Icon aria-hidden /></span>
+                <span className="nav-link__label" aria-hidden>{label}</span>
               </NavLink>
             ))}
           </div>
         ))}
         <div className="rail__foot">
           <ThemeToggle />
-          <p>Stack Overflow Developer Survey 2017–2025 (ODbL), World Bank, FRED. Independent project, not affiliated with Gartner or Stack Overflow.</p>
         </div>
       </nav>
       <main className="content">
@@ -98,6 +95,10 @@ export function Shell() {
             <Outlet />
           </Suspense>
         </div>
+        <footer className="page-foot">
+          StackScope, technology market intelligence. Data: Stack Overflow Developer Survey 2017–2025 (ODbL), World Bank,
+          FRED. Independent project, not affiliated with Gartner or Stack Overflow.
+        </footer>
       </main>
     </div>
   );

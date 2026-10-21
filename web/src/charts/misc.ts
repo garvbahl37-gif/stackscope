@@ -2,7 +2,7 @@ import type { EChartsOption } from "echarts";
 import type { NetworkNode, ReconRow } from "../lib/api";
 import { fixed, pct } from "../lib/format";
 import type { Tokens } from "../lib/theme";
-import { axisStyle, base, inkOn, tooltip, ttEnd, ttRow, ttSub, ttTitle } from "./base";
+import { axisStyle, base, inkOn, shadowPointer, tooltip, ttEnd, ttRow, ttSub, ttTitle } from "./base";
 
 // ------------------------------------------------------------------------------------------
 // Heatmap (sequential one-hue scale; "not asked" cells stay empty and are labelled as such)
@@ -34,7 +34,7 @@ export function heatmapOption(xs: string[], ys: string[], cells: { x: string; y:
     xAxis: { type: "category", data: xs, ...ax, splitLine: { show: false }, axisLine: { show: false }, axisLabel: { ...ax.axisLabel, interval: 0, rotate: xs.length > 12 ? 40 : 0 } },
     yAxis: { type: "category", data: ys, inverse: true, ...ax, splitLine: { show: false }, axisLine: { show: false }, axisLabel: { ...ax.axisLabel, color: t.ink2, fontSize: 12 } },
     visualMap: {
-      min, max, calculable: false, orient: "horizontal", left: "center", bottom: 0, itemWidth: 12, itemHeight: 160,
+      min, max, calculable: false, orient: "horizontal", left: "center", bottom: 0, itemWidth: 10, itemHeight: 200,
       text: [opts.fmt(max), opts.fmt(min)], textGap: 8,
       inRange: { color: t.seq }, textStyle: { color: t.ink3, fontSize: 11 },
     },
@@ -47,12 +47,12 @@ export function heatmapOption(xs: string[], ys: string[], cells: { x: string; y:
         const step = t.seq[Math.max(0, Math.min(t.seq.length - 1, Math.round(((c.v - min) / (max - min || 1)) * (t.seq.length - 1))))];
         return { value, label: { color: inkOn(step) } };
       }),
-      itemStyle: { borderColor: t.surface, borderWidth: 2, borderRadius: 3 },
+      itemStyle: { borderColor: t.surface, borderWidth: 4, borderRadius: 8 },
       label: {
         show: !!opts.cellLabels, fontSize: 10.5,
         formatter: (p: { value: [number, number, number] }) => (typeof p.value[2] === "number" ? opts.fmt(p.value[2]) : ""),
       },
-      emphasis: { itemStyle: { borderColor: t.ink, borderWidth: 1 } },
+      emphasis: { itemStyle: { borderColor: t.ink, borderWidth: 2 } },
     }],
   } as EChartsOption;
 }
@@ -110,7 +110,7 @@ export function labelledScatterOption(points: { name: string; x: number; y: numb
         data: points.map((p) => ({
           value: [p.x, p.y], name: p.name,
           symbolSize: 7 + 17 * Math.sqrt(p.size / maxSize),
-          itemStyle: { color: opts.selected && opts.selected !== p.name ? t.deemph : t.series[0], borderColor: t.surface, borderWidth: 2, opacity: 0.92 },
+          itemStyle: { color: opts.selected && opts.selected !== p.name ? t.deemph : t.series[0], borderColor: t.surface, borderWidth: 2.5, opacity: 0.9 },
         })),
         label: { show: true, formatter: "{b}", position: "right", fontSize: 11.5, color: t.ink2 },
         labelLayout: { hideOverlap: true },
@@ -149,8 +149,8 @@ export function churnSankeyOption(flows: { from_tech: string; to_tech: string; n
   const left = [...new Set(flows.map((f) => f.from_tech))];
   const right = [...new Set(flows.map((f) => f.to_tech))];
   const nodes = [
-    ...left.map((n) => ({ name: `from:${n}`, itemStyle: { color: colorOf.get(n) ?? t.series[0], borderColor: t.surface, borderWidth: 1 } })),
-    ...right.map((n) => ({ name: `to:${n}`, itemStyle: { color: t.ink3, borderColor: t.surface, borderWidth: 1 } })),
+    ...left.map((n) => ({ name: `from:${n}`, itemStyle: { color: colorOf.get(n) ?? t.series[0], borderWidth: 0, borderRadius: 5 } })),
+    ...right.map((n) => ({ name: `to:${n}`, itemStyle: { color: t.inverse, borderWidth: 0, borderRadius: 5 } })),
   ];
   return {
     ...base(t),
@@ -168,13 +168,15 @@ export function churnSankeyOption(flows: { from_tech: string; to_tech: string; n
       },
     }),
     series: [{
-      id: "sankey", type: "sankey", left: 8, right: 120, top: 8, bottom: 8, nodeWidth: 12, nodeGap: 10, draggable: false,
-      layoutIterations: 64, emphasis: { focus: "adjacency" },
+      id: "sankey", type: "sankey", left: 8, right: 120, top: 8, bottom: 8, nodeWidth: 16, nodeGap: 12, draggable: false,
+      layoutIterations: 64,
       data: nodes,
       links: flows.map((f) => ({ source: `from:${f.from_tech}`, target: `to:${f.to_tech}`, value: f.n, share: f.share_of_churners,
-                                 lineStyle: { color: colorOf.get(f.from_tech) ?? t.series[0], opacity: t.dark ? 0.42 : 0.3 } })),
-      label: { color: t.ink, fontSize: 12, fontFamily: t.font, formatter: (p: { name: string }) => p.name.split(":").slice(1).join(":") },
+                                 lineStyle: { color: "source", opacity: t.dark ? 0.36 : 0.26 } })),
+      label: { color: t.ink, fontSize: 12, fontWeight: 560, fontFamily: t.font, distance: 8,
+               formatter: (p: { name: string }) => p.name.split(":").slice(1).join(":") },
       lineStyle: { curveness: 0.5 },
+      emphasis: { focus: "adjacency", lineStyle: { opacity: t.dark ? 0.65 : 0.5 } },
     }],
   } as EChartsOption;
 }
@@ -243,24 +245,24 @@ export function waterfallOption(start: { label: string; value: number }, steps: 
   const labels = [start.label, ...steps.map((s) => s.label), "Estimate"];
   let running = start.value;
   const invisible: number[] = [start.value * 0];
-  const bars: { value: number; itemStyle: { color: string; borderRadius: number } }[] = [{ value: start.value, itemStyle: { color: t.deemph, borderRadius: 3 } }];
+  const bars: { value: number; itemStyle: { color: string; borderRadius: number } }[] = [{ value: start.value, itemStyle: { color: t.deemph, borderRadius: 999 } }];
   const deltas: number[] = [0];
   steps.forEach((s) => {
     const next = s.value;
     const lo = Math.min(running, next);
     invisible.push(lo);
-    bars.push({ value: Math.abs(next - running), itemStyle: { color: next >= running ? t.div.pos2 : t.div.neg2, borderRadius: 3 } });
+    bars.push({ value: Math.abs(next - running), itemStyle: { color: next >= running ? t.div.pos2 : t.div.neg2, borderRadius: 999 } });
     deltas.push(next - running);
     running = next;
   });
   invisible.push(0);
-  bars.push({ value: running, itemStyle: { color: t.series[0], borderRadius: 3 } });
+  bars.push({ value: running, itemStyle: { color: t.series[0], borderRadius: 999 } });
   deltas.push(0);
   return {
     ...base(t),
     grid: { left: 8, right: 56, top: 8, bottom: 24, containLabel: true },
     tooltip: tooltip(t, {
-      trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: t.dark ? "rgba(255,255,255,0.04)" : "rgba(15,42,51,0.04)" } },
+      trigger: "axis", axisPointer: shadowPointer(t),
       formatter: (params: { dataIndex: number }[]) => {
         const i = params[0].dataIndex;
         if (i === 0) return ttTitle(labels[0]) + ttRow(t.deemph, "Typical pay", fmt(start.value), "rect") + ttEnd;
@@ -273,9 +275,9 @@ export function waterfallOption(start: { label: string; value: number }, steps: 
     xAxis: { type: "value", ...ax, axisLine: { show: false }, axisLabel: { ...ax.axisLabel, formatter: (v: number) => fmt(v) } },
     yAxis: { type: "category", data: labels, inverse: true, ...ax, splitLine: { show: false }, axisLabel: { ...ax.axisLabel, color: t.ink2, fontSize: 12 } },
     series: [
-      { id: "base", type: "bar", stack: "w", data: invisible, itemStyle: { color: "transparent" }, barWidth: 14, silent: true },
+      { id: "base", type: "bar", stack: "w", data: invisible, itemStyle: { color: "transparent" }, barWidth: 16, silent: true },
       {
-        id: "delta", type: "bar", stack: "w", data: bars, barWidth: 14,
+        id: "delta", type: "bar", stack: "w", data: bars, barWidth: 16,
         label: {
           show: true, position: "right", fontSize: 11, color: t.ink2,
           formatter: (p: { dataIndex: number }) => {
