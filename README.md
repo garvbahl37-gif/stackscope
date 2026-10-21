@@ -17,7 +17,7 @@ momentum, where developers are migrating, what skills are worth after controllin
 trust each number. The warehouse is DuckDB (a star schema), the analytics are Python, the API is FastAPI and the dashboard
 is React with ECharts. Everything, from the raw download to the Excel pack, rebuilds with one command.
 
-![StackScope overview: an animated market-position quadrant for programming languages](docs/screenshots/overview.png)
+![StackScope overview: AI tool adoption, median pay by country, Rust's rise and database adoption trends](docs/screenshots/overview.png)
 
 > Independent portfolio project. Not affiliated with Gartner or Stack Overflow. "Magic Quadrant" is a Gartner trademark;
 > the quadrant here is an original, data-driven method that only borrows the idea of a two-axis market view.
