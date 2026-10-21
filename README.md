@@ -17,7 +17,7 @@ momentum, where developers are migrating, what skills are worth after controllin
 trust each number. The warehouse is DuckDB (a star schema), the analytics are Python, the API is FastAPI and the dashboard
 is React with ECharts. Everything, from the raw download to the Excel pack, rebuilds with one command.
 
-![StackScope overview: AI tool adoption, median pay by country, Rust's rise and database adoption trends](docs/screenshots/overview.png)
+![StackScope overview: AI tool adoption, median pay by country, Rust's rise and database adoption trends](docs/screenshots/overview.png?v=2)
 
 > Independent portfolio project. Not affiliated with Gartner or Stack Overflow. "Magic Quadrant" is a Gartner trademark;
 > the quadrant here is an original, data-driven method that only borrows the idea of a two-axis market view.
@@ -104,10 +104,10 @@ those published figures agree within half a percentage point (see the reconcilia
 Every chart has a data-table view and a CSV export, and the dashboard has light and dark themes.
 
 <table>
-<tr><td><img src="docs/screenshots/landscape.png" alt="Market landscape"></td><td><img src="docs/screenshots/radar.png" alt="Technology radar"></td></tr>
-<tr><td><img src="docs/screenshots/retention.png" alt="Retention and churn"></td><td><img src="docs/screenshots/estimator.png" alt="Salary estimator"></td></tr>
-<tr><td><img src="docs/screenshots/ai.png" alt="AI adoption and trust"></td><td><img src="docs/screenshots/quality.png" alt="Data quality"></td></tr>
-<tr><td><img src="docs/screenshots/pay.png" alt="Pay and skills"></td><td><img src="docs/screenshots/landscape-dark.png" alt="Market landscape in the dark theme"></td></tr>
+<tr><td><img src="docs/screenshots/landscape.png?v=2" alt="Market landscape"></td><td><img src="docs/screenshots/radar.png?v=2" alt="Technology radar"></td></tr>
+<tr><td><img src="docs/screenshots/retention.png?v=2" alt="Retention and churn"></td><td><img src="docs/screenshots/estimator.png?v=2" alt="Salary estimator"></td></tr>
+<tr><td><img src="docs/screenshots/ai.png?v=2" alt="AI adoption and trust"></td><td><img src="docs/screenshots/quality.png?v=2" alt="Data quality"></td></tr>
+<tr><td><img src="docs/screenshots/pay.png?v=2" alt="Pay and skills"></td><td><img src="docs/screenshots/landscape-dark.png?v=2" alt="Market landscape in the dark theme"></td></tr>
 </table>
 
 ## Skills demonstrated
